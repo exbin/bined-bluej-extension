@@ -1,0 +1,95 @@
+version = '0.2.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        mavenLocal()
+        jcenter()
+    }
+}
+
+['java', 'distribution', 'maven'].each {
+    apply plugin: it
+}
+
+sourceCompatibility = '1.10'
+
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    doFirst {
+        options.fork = true
+        if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
+            options.bootstrapClasspath = files("${System.properties['java.home']}/lib/rt.jar", "$File.pathSeparator${System.properties['java.home']}/jre/lib/jsse.jar")
+        }
+    }
+}
+
+// Disable tests on build
+if (!gradle.startParameter.taskNames.any {it.endsWith("test")}) {
+    tasks.withType(Test) {enabled = false}
+}
+
+task testJar(type: Jar, dependsOn: testClasses) {
+    classifier "tests"
+    baseName = "test-${project.archivesBaseName}"
+    from sourceSets.test.output
+}
+
+configurations {
+    tests
+}
+
+artifacts {
+    tests testJar
+}
+
+task sourceJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.java
+}
+
+javadoc {
+    if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+        options.addBooleanOption('html5', true)
+    }
+}
+
+task javadocJar (type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+if (!hasProperty('mainClass')) {
+    ext.mainClass = 'SimpleExtension'
+}
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs "lib"
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': mainClass
+        )
+    }
+}
+
+dependencies {
+    compile ':bluejext'
+    compile ':bined-core-0.2.0-SNAPSHOT'
+    compile ':bined-delta-0.2.0-SNAPSHOT'
+    compile ':bined-extended-0.2.0-SNAPSHOT'
+    compile ':bined-highlight-swing-0.2.0-SNAPSHOT'
+    compile ':bined-operation-0.2.0-SNAPSHOT'
+    compile ':bined-operation-swing-0.2.0-SNAPSHOT'
+    compile ':bined-swing-0.2.0-SNAPSHOT'
+    compile ':bined-swing-extended-0.2.0-SNAPSHOT'
+    compile ':exbin-binary_data-0.1.3-20190227.214847-12'
+    compile ':jsr305-3.0.2'
+    testCompile group : 'junit', name: 'junit', version: '4.10'
+}
