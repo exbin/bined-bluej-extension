@@ -24,7 +24,7 @@ Features
 Compiling
 ---------
 
-Java Development Kit (JDK) version 8 or later is required to build this project.
+Java Development Kit (JDK) version 10 or later is required to build this project.
 
 License
 -------

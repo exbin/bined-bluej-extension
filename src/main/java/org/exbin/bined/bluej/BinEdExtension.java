@@ -25,22 +25,33 @@ import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.swing.*;
 import java.awt.event.*;
+import java.util.ResourceBundle;
+import org.exbin.framework.gui.utils.LanguageUtils;
 
 /**
- * Extended code area component default painter.
+ * BinEd BlueJ Extension class.
  *
- * @version 0.2.0 2019/05/10
+ * @version 0.2.0 2019/05/11
  * @author ExBin Project (https://exbin.org)
  */
 @ParametersAreNonnullByDefault
 public class BinEdExtension extends Extension implements PackageListener {
 
+    private final ResourceBundle resourceBundle;
+    private BlueJ bluej;
+
+    public BinEdExtension() {
+        resourceBundle = LanguageUtils.getResourceBundleByClass(BinEdExtension.class);
+    }
+
     /*
      * When this method is called, the extension may start its work.
      */
+    @Override
     public void startup(BlueJ bluej) {
+        this.bluej = bluej;
         // Register a generator for menu items
-        bluej.setMenuGenerator(new MenuBuilder());
+        bluej.setMenuGenerator(new MenuBuilder(bluej));
 
         // Register a "preferences" panel generator
         Preferences myPreferences = new Preferences(bluej);
@@ -85,7 +96,7 @@ public class BinEdExtension extends Extension implements PackageListener {
      */
     @Override
     public String getVersion() {
-        return ("0.2.0");
+        return resourceBundle.getString("Application.version");
     }
 
     /*
@@ -93,29 +104,16 @@ public class BinEdExtension extends Extension implements PackageListener {
      */
     @Override
     public String getName() {
-        return ("BinEd Binary/Hexadecimal Editor Extension");
+        return resourceBundle.getString("Application.name");
     }
 
     @Override
     public void terminate() {
-        System.out.println("Simple extension terminates");
     }
 
     @Override
     public String getDescription() {
-        return "Binary/hexadecimal editor based on BinEd library. Use \"Open as Binary\" action in main menu or in files context menu.\n"
-                + "\n"
-                + "Features\n"
-                + "* Visualize data as numerical (hexadecimal) codes and text representation\n"
-                + "* Codes can be also binary, octal or decimal\n"
-                + "* Support for Unicode, UTF-8 and other charsets\n"
-                + "* Insert and overwrite edit modes\n"
-                + "* Searching for text / hexadecimal code with matching highlighting\n"
-                + "* Support for undo/redo\n"
-                + "* Support for files with size up to exabytes\n"
-                + "\n"
-                + "License\n"
-                + "Apache License, Version 2.0";
+        return resourceBundle.getString("Application.description");
     }
 
     /*
@@ -124,7 +122,7 @@ public class BinEdExtension extends Extension implements PackageListener {
     @Override
     public URL getURL() {
         try {
-            return new URL("https://bined.exbin.org/bluej-extension");
+            return new URL(resourceBundle.getString("Application.homepage"));
         } catch (Exception ex) {
             System.out.println("Broken URL: Exception=" + ex.getMessage());
             return null;
@@ -180,9 +178,14 @@ class Preferences implements PreferenceGenerator {
  */
 class MenuBuilder extends MenuGenerator {
 
+    private BlueJ bluej;
     private BPackage curPackage;
     private BClass curClass;
     private BObject curObject;
+
+    public MenuBuilder(BlueJ bluej) {
+        this.bluej = bluej;
+    }
 
     @Override
     public JMenuItem getToolsMenuItem(BPackage aPackage) {
@@ -191,10 +194,11 @@ class MenuBuilder extends MenuGenerator {
 
     @Override
     public JMenuItem getClassMenuItem(BClass aClass) {
-        JMenu jm = new JMenu("Simple Extension");
-        jm.add(new JMenuItem(new SimpleAction("Click Class", "Class menu:")));
-        jm.add(new JMenuItem(new EditAction()));
-        return jm;
+        JMenuItem openAsBinary = new JMenuItem(new OpenAsBinaryAction(bluej));
+//        JMenu jm = new JMenu("Simple Extension");
+//        jm.add(new JMenuItem(new SimpleAction("Click Class", "Class menu:")));
+//        jm.add(new JMenuItem(new EditAction()));
+        return openAsBinary;
     }
 
     @Override
