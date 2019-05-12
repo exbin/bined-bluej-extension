@@ -23,11 +23,18 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Font;
+import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.swing.AbstractAction;
 import javax.swing.JCheckBoxMenuItem;
@@ -75,6 +82,8 @@ import org.exbin.framework.bined.options.StatusOptions;
 import org.exbin.framework.gui.about.panel.AboutPanel;
 import org.exbin.framework.gui.utils.WindowUtils.DialogWrapper;
 import org.exbin.framework.gui.utils.panel.CloseControlPanel;
+import org.exbin.utils.binary_data.ByteArrayEditableData;
+import org.exbin.utils.binary_data.EditableBinaryData;
 
 /**
  * Hexadecimal editor main panel.
@@ -115,7 +124,7 @@ public final class BinaryEditorPanel extends JPanel {
     private FileHandlingMode fileHandlingMode = DEFAULT_FILE_HANDLING_MODE;
     protected String displayName;
     private long documentOriginalSize;
-//    private DataObject dataObject;
+    private String fileName;
 
     public BinaryEditorPanel(BlueJ bluej) {
         initComponents();
@@ -383,11 +392,11 @@ public final class BinaryEditorPanel extends JPanel {
         }
 
         if (choice == JOptionPane.YES_OPTION) {
-//            try {
-//                savable.handleSave();
-//            } catch (IOException ex) {
-//                Exceptions.printStackTrace(ex);
-//            }
+            try {
+                saveFile();
+            } catch (IOException ex) {
+                Logger.getLogger(BinaryEditorPanel.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
         return true;
@@ -399,28 +408,6 @@ public final class BinaryEditorPanel extends JPanel {
 
     void setModified(boolean modified) {
         this.modified = modified;
-//        final String htmlDisplayName;
-//        if (modified && opened) {
-//            savable.activate();
-//            content.add(savable);
-//            htmlDisplayName = "<html><b>" + displayName + "</b></html>";
-//        } else {
-//            savable.deactivate();
-//            content.remove(savable);
-//            htmlDisplayName = displayName;
-//        }
-//
-//        if (SwingUtilities.isEventDispatchThread()) {
-//            setHtmlDisplayName(htmlDisplayName);
-//        } else {
-//            try {
-//                SwingUtilities.invokeAndWait(() -> {
-//                    setHtmlDisplayName(htmlDisplayName);
-//                });
-//            } catch (InterruptedException | InvocationTargetException ex) {
-//                Exceptions.printStackTrace(ex);
-//            }
-//        }
     }
 
     private void setNewData() {
@@ -438,9 +425,9 @@ public final class BinaryEditorPanel extends JPanel {
      */
     private boolean releaseFile() {
 
-//        if (dataObject == null) {
-//            return true;
-//        }
+        if (fileName == null) {
+            return true;
+        }
         while (isModified()) {
             Object[] options = {
                 "Save",
@@ -460,40 +447,71 @@ public final class BinaryEditorPanel extends JPanel {
                 return false;
             }
 
-//            try {
-//                saveDataObject(dataObject);
-//            } catch (IOException ex) {
-//                ex.printStackTrace();
-//            }
+            try {
+                saveFile();
+            } catch (IOException ex) {
+                Logger.getLogger(BinaryEditorPanel.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
         return true;
     }
 
-//    public void openDataObject(DataObject dataObject) {
-//        this.dataObject = dataObject;
-//        displayName = dataObject.getPrimaryFile().getNameExt();
-//        setHtmlDisplayName(displayName);
-//        node.openFile(dataObject);
-//        savable.setDataObject(dataObject);
-//        opened = true;
-//        documentOriginalSize = codeArea.getDataSize();
-//        updateCurrentDocumentSize();
-//        updateCurrentMemoryMode();
-//        final Charset charset = Charset.forName(FileEncodingQuery.getEncoding(dataObject.getPrimaryFile()).name());
-//        if (charsetChangeListener != null) {
-//            charsetChangeListener.charsetChanged();
-//        }
-//        codeArea.setCharset(charset);
-//    }
-//    public void saveDataObject(DataObject dataObject) throws IOException {
-//        node.saveFile(dataObject);
-//        undoHandler.setSyncPoint();
-//        setModified(false);
-//        documentOriginalSize = codeArea.getDataSize();
-//        updateCurrentDocumentSize();
-//        updateCurrentMemoryMode();
-//    }
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void openFile(String fileName) throws IOException {
+        this.fileName = fileName;
+        openFileInt(new File(fileName));
+    }
+
+    public void openFile(File file) throws IOException {
+        this.fileName = file.getName();
+        openFileInt(file);
+    }
+
+    private void openFileInt(File file) throws IOException {
+        boolean editable = file.canWrite();
+        BinaryData oldData = codeArea.getContentData();
+        if (fileHandlingMode == FileHandlingMode.MEMORY) {
+            EditableBinaryData data = new ByteArrayEditableData();
+            data.loadFromStream(new FileInputStream(file));
+            codeArea.setContentData(data);
+            oldData.dispose();
+        } else {
+            FileDataSource fileSource = segmentsRepository.openFileSource(file, editable ? FileDataSource.EditationMode.READ_WRITE : FileDataSource.EditationMode.READ_ONLY);
+            DeltaDocument document = segmentsRepository.createDocument(fileSource);
+            codeArea.setContentData(document);
+            oldData.dispose();
+        }
+        codeArea.setEditationMode(editable ? EditationMode.EXPANDING : EditationMode.READ_ONLY);
+        opened = true;
+        documentOriginalSize = codeArea.getDataSize();
+        updateCurrentDocumentSize();
+        updateCurrentMemoryMode();
+    }
+
+    public void saveFile(String fileName) throws IOException {
+        this.fileName = fileName;
+        saveFile();
+    }
+
+    public void saveFile() throws IOException {
+        BinaryData data = codeArea.getContentData();
+        if (fileHandlingMode == FileHandlingMode.MEMORY) {
+            segmentsRepository.saveDocument((DeltaDocument) data);
+        } else {
+            File file = new File(fileName);
+            data.saveToStream(new FileOutputStream(file));
+        }
+        undoHandler.setSyncPoint();
+        setModified(false);
+        documentOriginalSize = codeArea.getDataSize();
+        updateCurrentDocumentSize();
+        updateCurrentMemoryMode();
+    }
+
     private void updateCurrentDocumentSize() {
         long dataSize = codeArea.getContentData().getDataSize();
         binaryStatus.setCurrentDocumentSize(dataSize, documentOriginalSize);
@@ -545,20 +563,14 @@ public final class BinaryEditorPanel extends JPanel {
     private javax.swing.JPanel codeAreaPanel;
     // End of variables declaration//GEN-END:variables
 
-//    @Override
-//    public void componentOpened() {
-//        super.componentOpened();
-//        codeArea.requestFocus();
-//    }
-//
-//    @Override
-//    public void componentClosed() {
-//        if (savable != null) {
-//            savable.deactivate();
-//        }
-//        closeData();
-//        super.componentClosed();
-//    }
+    public void componentOpened() {
+        codeArea.requestFocus();
+    }
+
+    public void componentClosed() {
+        closeData();
+    }
+
     private void closeData() {
         BinaryData data = codeArea.getContentData();
         codeArea.setContentData(new ByteArrayData());
@@ -580,14 +592,6 @@ public final class BinaryEditorPanel extends JPanel {
         }
 
         return segmentsRepository;
-    }
-
-    public void writeProperties(java.util.Properties p) {
-        p.setProperty("version", "1.0");
-    }
-
-    public void readProperties(java.util.Properties p) {
-        String version = p.getProperty("version");
     }
 
     @Nonnull
@@ -720,12 +724,13 @@ public final class BinaryEditorPanel extends JPanel {
 
         final JMenuItem optionsMenuItem = new JMenuItem("Options...");
         optionsMenuItem.addActionListener((ActionEvent e) -> {
-            final BinEdOptionsPanelBorder optionsPanel = new BinEdOptionsPanelBorder();
+            Frame parent = WindowUtils.getFrame(this);
+            final BinEdOptionsPanelBorder optionsPanel = new BinEdOptionsPanelBorder(preferences);
             optionsPanel.load();
             optionsPanel.setApplyOptions(getApplyOptions());
             OptionsControlPanel optionsControlPanel = new OptionsControlPanel();
             JPanel dialogPanel = WindowUtils.createDialogPanel(optionsPanel, optionsControlPanel);
-            DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, null, "Options", Dialog.ModalityType.MODELESS);
+            DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parent, "Options", Dialog.ModalityType.MODELESS);
             optionsControlPanel.setHandler((OptionsControlHandler.ControlActionType actionType) -> {
                 if (actionType == OptionsControlHandler.ControlActionType.SAVE) {
                     optionsPanel.store();

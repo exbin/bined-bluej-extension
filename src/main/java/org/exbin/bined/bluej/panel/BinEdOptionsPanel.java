@@ -15,7 +15,6 @@
  */
 package org.exbin.bined.bluej.panel;
 
-import bluej.extensions.BlueJ;
 import org.exbin.bined.bluej.BinEdApplyOptions;
 import java.awt.Component;
 import java.util.ArrayList;
@@ -28,7 +27,6 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.event.ListSelectionEvent;
 import org.exbin.framework.bined.preferences.BinaryEditorPreferences;
-import org.exbin.framework.PreferencesWrapper;
 import org.exbin.framework.bined.options.CharsetOptions;
 import org.exbin.framework.bined.options.CodeAreaOptions;
 import org.exbin.framework.bined.options.EditorOptions;
@@ -129,9 +127,9 @@ public class BinEdOptionsPanel extends javax.swing.JPanel {
             return result;
         });
     }
-    
-    public void setBlueJ(BlueJ bluej) {
-        preferences = new BinaryEditorPreferences(new PreferencesWrapper(bluej));
+
+    public void setPreferences(BinaryEditorPreferences preferences) {
+        this.preferences = preferences;
     }
 
     /**

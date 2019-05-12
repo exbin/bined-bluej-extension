@@ -117,7 +117,11 @@ public class WindowUtils {
 //        DialogDescriptor dialogDescriptor = new DialogDescriptor(component, dialogTitle, modalityType != Dialog.ModalityType.MODELESS, new Object[0], null, 0, null, null);
 //        final Dialog dialog = DialogDisplayer.getDefault().createDialog(dialogDescriptor);
         JDialog dialog = new JDialog(parent, modalityType);
+        dialog.setTitle(dialogTitle);
         dialog.add(component);
+        if (parent != null) {
+            dialog.setLocationRelativeTo(parent);
+        }
         Dimension size = component.getPreferredSize();
         dialog.setSize(size.width + 8, size.height + 24);
         return new DialogWrapper() {
@@ -400,7 +404,7 @@ public class WindowUtils {
         void show();
 
         void close();
-        
+
         void dispose();
 
         Window getWindow();

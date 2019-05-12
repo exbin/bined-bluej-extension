@@ -15,11 +15,32 @@
  */
 package org.exbin.bined.bluej;
 
+import bluej.extensions.BClass;
+import bluej.extensions.BObject;
+import bluej.extensions.BPackage;
+import bluej.extensions.BlueJ;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 /**
- * Anchor class for BinEd plugin preferences root.
+ * Interface for for menu handling.
  *
- * @version 0.2.0 2019/03/01
+ * @version 0.2.0 2019/05/12
  * @author ExBin Project (http://exbin.org)
  */
-public final class BinEdNetBeansPlugin {
+@ParametersAreNonnullByDefault
+public interface BlueJMenuHandler {
+
+    @Nonnull
+    BlueJ getBlueJ();
+
+    @Nullable
+    BPackage getCurPackage();
+
+    @Nullable
+    BClass getCurClass();
+
+    @Nullable
+    BObject getCurObject();
 }

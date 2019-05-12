@@ -109,7 +109,7 @@ public class CodeAreaParameters {
         }
         value = preferences.get(TextFontOptionsPanel.PREFERENCES_TEXT_FONT_SIZE, null);
         if (value != null) {
-            attribs.put(TextAttribute.SIZE, new Integer(value).floatValue());
+            attribs.put(TextAttribute.SIZE, Integer.valueOf(value).floatValue());
         }
         if (Boolean.valueOf(preferences.get(TextFontOptionsPanel.PREFERENCES_TEXT_FONT_UNDERLINE, null))) {
             attribs.put(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_LOW_ONE_PIXEL);

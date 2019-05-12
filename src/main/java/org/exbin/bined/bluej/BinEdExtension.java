@@ -20,8 +20,6 @@ import bluej.extensions.event.*;
 import bluej.extensions.editor.*;
 
 import java.net.URL;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.swing.*;
 import java.awt.event.*;
@@ -31,7 +29,7 @@ import org.exbin.framework.gui.utils.LanguageUtils;
 /**
  * BinEd BlueJ Extension class.
  *
- * @version 0.2.0 2019/05/11
+ * @version 0.2.0 2019/05/12
  * @author ExBin Project (https://exbin.org)
  */
 @ParametersAreNonnullByDefault
@@ -176,7 +174,7 @@ class Preferences implements PreferenceGenerator {
  * - No reference to the JMenuItem should be stored in the extension.
  * - You must be quick in generating your menu.
  */
-class MenuBuilder extends MenuGenerator {
+class MenuBuilder extends MenuGenerator implements BlueJMenuHandler {
 
     private BlueJ bluej;
     private BPackage curPackage;
@@ -189,28 +187,26 @@ class MenuBuilder extends MenuGenerator {
 
     @Override
     public JMenuItem getToolsMenuItem(BPackage aPackage) {
-        return new JMenuItem(new SimpleAction("Click Tools", "Tools menu:"));
+        JMenuItem openFileAsBinary = new JMenuItem(new OpenFileAsBinaryAction(this));
+        return openFileAsBinary;
     }
 
     @Override
     public JMenuItem getClassMenuItem(BClass aClass) {
-        JMenuItem openAsBinary = new JMenuItem(new OpenAsBinaryAction(bluej));
-//        JMenu jm = new JMenu("Simple Extension");
-//        jm.add(new JMenuItem(new SimpleAction("Click Class", "Class menu:")));
-//        jm.add(new JMenuItem(new EditAction()));
+        JMenuItem openAsBinary = new JMenuItem(new OpenAsBinaryAction(this));
         return openAsBinary;
     }
 
     @Override
     public JMenuItem getObjectMenuItem(BObject anObject) {
-        return new JMenuItem(new SimpleAction("Click Object", "Object menu:"));
+        JMenuItem openAsBinary = new JMenuItem(new OpenAsBinaryAction(this));
+        return openAsBinary;
     }
 
     // These methods will be called when
     // each of the different menus are about to be invoked.
     @Override
     public void notifyPostToolsMenu(BPackage bp, JMenuItem jmi) {
-        System.out.println("Post on Tools menu");
         curPackage = bp;
         curClass = null;
         curObject = null;
@@ -218,7 +214,6 @@ class MenuBuilder extends MenuGenerator {
 
     @Override
     public void notifyPostClassMenu(BClass bc, JMenuItem jmi) {
-        System.out.println("Post on Class menu");
         curPackage = null;
         curClass = bc;
         curObject = null;
@@ -226,7 +221,6 @@ class MenuBuilder extends MenuGenerator {
 
     @Override
     public void notifyPostObjectMenu(BObject bo, JMenuItem jmi) {
-        System.out.println("Post on Object menu");
         curPackage = null;
         curClass = null;
         curObject = bo;
@@ -276,6 +270,26 @@ class MenuBuilder extends MenuGenerator {
         // The TextLocation now points before the first character of the last line of the current text
         // which we'll assume contains the closing } bracket for the class
         classEditor.setText(lastLine, lastLine, "// Comment added by SimpleExtension\n");
+    }
+
+    @Override
+    public BlueJ getBlueJ() {
+        return bluej;
+    }
+
+    @Override
+    public BPackage getCurPackage() {
+        return curPackage;
+    }
+
+    @Override
+    public BClass getCurClass() {
+        return curClass;
+    }
+
+    @Override
+    public BObject getCurObject() {
+        return curObject;
     }
 
     // The nested class that instantiates the different (simple) menus.

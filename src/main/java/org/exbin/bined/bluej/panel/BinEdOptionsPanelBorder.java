@@ -18,6 +18,7 @@ package org.exbin.bined.bluej.panel;
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 import org.exbin.bined.bluej.BinEdApplyOptions;
+import org.exbin.framework.bined.preferences.BinaryEditorPreferences;
 
 /**
  * Hexadecimal editor options panel with border.
@@ -28,8 +29,9 @@ import org.exbin.bined.bluej.BinEdApplyOptions;
 @ParametersAreNonnullByDefault
 public class BinEdOptionsPanelBorder extends javax.swing.JPanel {
 
-    public BinEdOptionsPanelBorder() {
+    public BinEdOptionsPanelBorder(BinaryEditorPreferences preferences) {
         initComponents();
+        optionsPanel.setPreferences(preferences);
     }
 
     /**
