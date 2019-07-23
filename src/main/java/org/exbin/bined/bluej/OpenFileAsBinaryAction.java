@@ -66,7 +66,6 @@ public class OpenFileAsBinaryAction extends AbstractAction {
             closeControlPanel.setHandler(() -> {
                 dialog.close();
             });
-            WindowUtils.assignGlobalKeyListener(dialog.getWindow(), closeControlPanel.createOkCancelListener());
             //            dialog.setSize(650, 460);
 
             try {
@@ -75,7 +74,7 @@ public class OpenFileAsBinaryAction extends AbstractAction {
             } catch (IOException ex) {
                 Logger.getLogger(OpenFileAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
             }
-            dialog.show();
+            dialog.showCentered(frame);
         }
     }
 }

@@ -16,11 +16,11 @@
 package org.exbin.bined.bluej.panel;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import org.exbin.framework.bined.panel.ReplaceParameters;
-import org.exbin.framework.bined.panel.SearchParameters;
+import org.exbin.framework.bined.ReplaceParameters;
+import org.exbin.framework.bined.SearchParameters;
 
 /**
- * Hex search panel interface.
+ * Binary search panel interface.
  *
  * @version 0.2.0 2019/03/01
  * @author ExBin Project (http://exbin.org)

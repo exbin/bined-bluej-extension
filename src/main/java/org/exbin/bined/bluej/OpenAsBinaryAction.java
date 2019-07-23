@@ -60,7 +60,6 @@ public class OpenAsBinaryAction extends AbstractAction {
         closeControlPanel.setHandler(() -> {
             dialog.close();
         });
-        WindowUtils.assignGlobalKeyListener(dialog.getWindow(), closeControlPanel.createOkCancelListener());
         //            dialog.setSize(650, 460);
 
         try {
@@ -83,6 +82,6 @@ public class OpenAsBinaryAction extends AbstractAction {
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
         }
-        dialog.show();
+        dialog.showCentered(frame);
     }
 }

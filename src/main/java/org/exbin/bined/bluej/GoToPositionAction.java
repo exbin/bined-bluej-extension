@@ -15,6 +15,7 @@
  */
 package org.exbin.bined.bluej;
 
+import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -54,7 +55,7 @@ public class GoToPositionAction implements ActionListener {
         goToPanel.setCursorPosition(codeArea.getCaretPosition().getDataPosition());
         goToPanel.setMaxPosition(codeArea.getDataSize());
         JPanel dialogPanel = WindowUtils.createDialogPanel(goToPanel, goToControlPanel);
-        final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, null, resourceBundle.getString("dialog.title"), Dialog.ModalityType.APPLICATION_MODAL);
+        final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, (Component) event.getSource(), resourceBundle.getString("dialog.title"), Dialog.ModalityType.APPLICATION_MODAL);
 
         goToPanel.initFocus();
         goToControlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
@@ -69,7 +70,6 @@ public class GoToPositionAction implements ActionListener {
 
             dialog.close();
         });
-        WindowUtils.assignGlobalKeyListener(dialog.getWindow(), goToControlPanel.createOkCancelListener());
-        dialog.show();
+        dialog.showCentered((Component) event.getSource());
     }
 }

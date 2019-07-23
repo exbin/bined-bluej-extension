@@ -16,14 +16,13 @@
 package org.exbin.bined.bluej.panel;
 
 import bluej.extensions.BlueJ;
-import org.exbin.framework.PreferencesWrapper;
+import org.exbin.framework.preferences.PreferencesWrapper;
 import org.exbin.framework.editor.text.EncodingsHandler;
 import org.exbin.framework.bined.preferences.BinaryEditorPreferences;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -53,8 +52,6 @@ import org.exbin.bined.EditationMode;
 import org.exbin.bined.EditationOperation;
 import org.exbin.bined.PositionCodeType;
 import org.exbin.bined.bluej.BinEdApplyOptions;
-import org.exbin.bined.bluej.BinaryUndoSwingHandler;
-import org.exbin.bined.bluej.FileHandlingMode;
 import org.exbin.bined.bluej.GoToPositionAction;
 import org.exbin.bined.bluej.SearchAction;
 import org.exbin.bined.delta.DeltaDocument;
@@ -65,6 +62,7 @@ import org.exbin.bined.highlight.swing.extended.ExtendedHighlightNonAsciiCodeAre
 import org.exbin.framework.bined.panel.ValuesPanel;
 import org.exbin.bined.operation.BinaryDataCommand;
 import org.exbin.bined.operation.swing.CodeAreaOperationCommandHandler;
+import org.exbin.bined.operation.swing.CodeAreaUndoHandler;
 import org.exbin.bined.operation.undo.BinaryDataUndoUpdateListener;
 import org.exbin.bined.swing.extended.ExtCodeArea;
 import org.exbin.framework.bined.panel.BinaryStatusPanel;
@@ -76,6 +74,7 @@ import org.exbin.utils.binary_data.BinaryData;
 import org.exbin.utils.binary_data.ByteArrayData;
 import org.exbin.utils.binary_data.PagedData;
 import org.exbin.framework.bined.BinaryStatusApi;
+import org.exbin.framework.bined.FileHandlingMode;
 import org.exbin.framework.bined.options.CodeAreaOptions;
 import org.exbin.framework.bined.options.EditorOptions;
 import org.exbin.framework.bined.options.StatusOptions;
@@ -86,9 +85,9 @@ import org.exbin.utils.binary_data.ByteArrayEditableData;
 import org.exbin.utils.binary_data.EditableBinaryData;
 
 /**
- * Hexadecimal editor main panel.
+ * Binary editor main panel.
  *
- * @version 0.2.0 2019/05/11
+ * @version 0.2.0 2019/07/23
  * @author ExBin Project (http://exbin.org)
  */
 public final class BinaryEditorPanel extends JPanel {
@@ -101,7 +100,7 @@ public final class BinaryEditorPanel extends JPanel {
     private final BinaryEditorPreferences preferences;
     private static SegmentsRepository segmentsRepository = null;
     private final ExtCodeArea codeArea;
-    private final BinaryUndoSwingHandler undoHandler;
+    private final CodeAreaUndoHandler undoHandler;
 //    private final InstanceContent content = new InstanceContent();
     private final int metaMask;
 
@@ -135,12 +134,16 @@ public final class BinaryEditorPanel extends JPanel {
         codeArea.setPainter(new ExtendedHighlightNonAsciiCodeAreaPainter(codeArea));
         codeArea.setCodeFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         codeArea.getCaret().setBlinkRate(300);
+        undoHandler = new CodeAreaUndoHandler(codeArea);
 
-        toolbarPanel = new BinEdToolbarPanel(preferences, codeArea);
+        toolbarPanel = new BinEdToolbarPanel(preferences, codeArea, undoHandler);
+        toolbarPanel.setSaveAction(this::saveFileButtonActionPerformed);
         statusPanel = new BinaryStatusPanel();
         codeAreaPanel.add(toolbarPanel, BorderLayout.NORTH);
         registerEncodingStatus(statusPanel);
-        encodingsHandler = new EncodingsHandler(new TextEncodingStatusApi() {
+        encodingsHandler = new EncodingsHandler();
+        encodingsHandler.init();
+        encodingsHandler.setTextEncodingStatus(new TextEncodingStatusApi() {
             @Override
             public String getEncoding() {
                 return encodingStatus.getEncoding();
@@ -150,12 +153,10 @@ public final class BinaryEditorPanel extends JPanel {
             public void setEncoding(String encodingName) {
                 codeArea.setCharset(Charset.forName(encodingName));
                 encodingStatus.setEncoding(encodingName);
-                preferences.getCodeAreaParameters().setSelectedEncoding(encodingName);
+                preferences.getEncodingPreferences().setSelectedEncoding(encodingName);
                 charsetChangeListener.charsetChanged();
             }
         });
-
-        undoHandler = new BinaryUndoSwingHandler(codeArea);
 
         loadFromPreferences();
 
@@ -200,20 +201,25 @@ public final class BinaryEditorPanel extends JPanel {
             }
         });
 
+        toolbarPanel.applyFromCodeArea();
+
         undoHandler.addUndoUpdateListener(new BinaryDataUndoUpdateListener() {
             @Override
             public void undoCommandPositionChanged() {
                 codeArea.repaint();
+                toolbarPanel.updateUndoState();
                 updateCurrentDocumentSize();
                 updateModified();
             }
 
             @Override
             public void undoCommandAdded(final BinaryDataCommand command) {
+                toolbarPanel.updateUndoState();
                 updateCurrentDocumentSize();
                 updateModified();
             }
         });
+        toolbarPanel.updateUndoState();
 
         int metaMaskValue;
         try {
@@ -223,7 +229,7 @@ public final class BinaryEditorPanel extends JPanel {
         }
         metaMask = metaMaskValue;
 
-        searchAction = new SearchAction(codeArea, codeAreaPanel, metaMask);
+        searchAction = new SearchAction(codeArea, codeAreaPanel);
         codeArea.addDataChangedListener(() -> {
             searchAction.codeAreaDataChanged();
             updateCurrentDocumentSize();
@@ -310,7 +316,7 @@ public final class BinaryEditorPanel extends JPanel {
                 FileHandlingMode newHandlingMode = memoryMode == BinaryStatusApi.MemoryMode.DELTA_MODE ? FileHandlingMode.DELTA : FileHandlingMode.MEMORY;
                 if (newHandlingMode != fileHandlingMode) {
                     switchDeltaMemoryMode(newHandlingMode);
-                    preferences.getEditorParameters().setFileHandlingMode(newHandlingMode.name());
+                    preferences.getEditorPreferences().setFileHandlingMode(newHandlingMode);
                 }
             }
         });
@@ -408,6 +414,8 @@ public final class BinaryEditorPanel extends JPanel {
 
     void setModified(boolean modified) {
         this.modified = modified;
+        toolbarPanel.updateUndoState();
+        toolbarPanel.updateModified(modified);
     }
 
     private void setNewData() {
@@ -724,28 +732,26 @@ public final class BinaryEditorPanel extends JPanel {
 
         final JMenuItem optionsMenuItem = new JMenuItem("Options...");
         optionsMenuItem.addActionListener((ActionEvent e) -> {
-            Frame parent = WindowUtils.getFrame(this);
             final BinEdOptionsPanelBorder optionsPanel = new BinEdOptionsPanelBorder(preferences);
             optionsPanel.load();
             optionsPanel.setApplyOptions(getApplyOptions());
             OptionsControlPanel optionsControlPanel = new OptionsControlPanel();
             JPanel dialogPanel = WindowUtils.createDialogPanel(optionsPanel, optionsControlPanel);
-            DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parent, "Options", Dialog.ModalityType.MODELESS);
+            DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, WindowUtils.getWindow(this), "Options", Dialog.ModalityType.APPLICATION_MODAL);
             optionsControlPanel.setHandler((OptionsControlHandler.ControlActionType actionType) -> {
                 if (actionType == OptionsControlHandler.ControlActionType.SAVE) {
                     optionsPanel.store();
                 }
                 if (actionType != OptionsControlHandler.ControlActionType.CANCEL) {
                     setApplyOptions(optionsPanel.getApplyOptions());
-                    encodingsHandler.setEncodings(optionsPanel.getApplyOptions().getCharsetOptions().getEncodings());
+                    encodingsHandler.setEncodings(optionsPanel.getApplyOptions().getEncodingOptions().getEncodings());
                     codeArea.repaint();
                 }
 
                 dialog.close();
             });
-            WindowUtils.assignGlobalKeyListener(dialog.getWindow(), optionsControlPanel.createOkCancelListener());
             dialog.getWindow().setSize(650, 460);
-            dialog.show();
+            dialog.showCentered(WindowUtils.getWindow(this));
         });
         result.add(optionsMenuItem);
 
@@ -763,13 +769,12 @@ public final class BinaryEditorPanel extends JPanel {
                     aboutPanel.setupFields();
                     CloseControlPanel closeControlPanel = new CloseControlPanel();
                     JPanel dialogPanel = WindowUtils.createDialogPanel(aboutPanel, closeControlPanel);
-                    DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, null, "About Plugin", Dialog.ModalityType.APPLICATION_MODAL);
+                    DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, WindowUtils.getWindow(this), "About Plugin", Dialog.ModalityType.APPLICATION_MODAL);
                     closeControlPanel.setHandler(() -> {
                         dialog.close();
                     });
-                    WindowUtils.assignGlobalKeyListener(dialog.getWindow(), closeControlPanel.createOkCancelListener());
                     //            dialog.setSize(650, 460);
-                    dialog.show();
+                    dialog.showCentered(WindowUtils.getWindow(this));
                 });
                 result.add(aboutMenuItem);
             }
@@ -813,7 +818,7 @@ public final class BinaryEditorPanel extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 codeArea.setPositionCodeType(PositionCodeType.OCTAL);
-                preferences.getCodeAreaParameters().setPositionCodeType(PositionCodeType.OCTAL);
+                preferences.getCodeAreaPreferences().setPositionCodeType(PositionCodeType.OCTAL);
             }
         });
         menu.add(octalCodeTypeMenuItem);
@@ -824,7 +829,7 @@ public final class BinaryEditorPanel extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 codeArea.setPositionCodeType(PositionCodeType.DECIMAL);
-                preferences.getCodeAreaParameters().setPositionCodeType(PositionCodeType.DECIMAL);
+                preferences.getCodeAreaPreferences().setPositionCodeType(PositionCodeType.DECIMAL);
             }
         });
         menu.add(decimalCodeTypeMenuItem);
@@ -835,7 +840,7 @@ public final class BinaryEditorPanel extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 codeArea.setPositionCodeType(PositionCodeType.HEXADECIMAL);
-                preferences.getCodeAreaParameters().setPositionCodeType(PositionCodeType.HEXADECIMAL);
+                preferences.getCodeAreaPreferences().setPositionCodeType(PositionCodeType.HEXADECIMAL);
             }
         });
         menu.add(hexadecimalCodeTypeMenuItem);
@@ -849,8 +854,8 @@ public final class BinaryEditorPanel extends JPanel {
         applyOptions.applyFromCodeArea(codeArea);
         EditorOptions editorOptions = applyOptions.getEditorOptions();
         editorOptions.setIsShowValuesPanel(valuesPanelVisible);
-        editorOptions.setFileHandlingMode(fileHandlingMode.name());
-        applyOptions.getStatusOptions().loadFromParameters(preferences.getStatusParameters());
+        editorOptions.setFileHandlingMode(fileHandlingMode);
+        applyOptions.getStatusOptions().loadFromParameters(preferences.getStatusPreferences());
         return applyOptions;
     }
 
@@ -861,7 +866,7 @@ public final class BinaryEditorPanel extends JPanel {
 
         FileHandlingMode newFileHandlingMode;
         try {
-            newFileHandlingMode = FileHandlingMode.valueOf(editorOptions.getFileHandlingMode());
+            newFileHandlingMode = editorOptions.getFileHandlingMode();
         } catch (Exception ex) {
             newFileHandlingMode = DEFAULT_FILE_HANDLING_MODE;
         }
@@ -871,19 +876,19 @@ public final class BinaryEditorPanel extends JPanel {
         statusPanel.setStatusOptions(statusOptions);
         toolbarPanel.applyFromCodeArea();
 
-        int selectedLayoutProfile = preferences.getLayoutParameters().getSelectedProfile();
+        int selectedLayoutProfile = preferences.getLayoutPreferences().getSelectedProfile();
         if (selectedLayoutProfile >= 0) {
-            codeArea.setLayoutProfile(preferences.getLayoutParameters().getLayoutProfile(selectedLayoutProfile));
+            codeArea.setLayoutProfile(preferences.getLayoutPreferences().getLayoutProfile(selectedLayoutProfile));
         }
 
-        int selectedThemeProfile = preferences.getThemeParameters().getSelectedProfile();
+        int selectedThemeProfile = preferences.getThemePreferences().getSelectedProfile();
         if (selectedThemeProfile >= 0) {
-            codeArea.setThemeProfile(preferences.getThemeParameters().getThemeProfile(selectedThemeProfile));
+            codeArea.setThemeProfile(preferences.getThemePreferences().getThemeProfile(selectedThemeProfile));
         }
 
-        int selectedColorProfile = preferences.getColorParameters().getSelectedProfile();
+        int selectedColorProfile = preferences.getColorPreferences().getSelectedProfile();
         if (selectedColorProfile >= 0) {
-            codeArea.setColorsProfile(preferences.getColorParameters().getColorsProfile(selectedColorProfile));
+            codeArea.setColorsProfile(preferences.getColorPreferences().getColorsProfile(selectedColorProfile));
         }
     }
 
@@ -918,40 +923,48 @@ public final class BinaryEditorPanel extends JPanel {
         return codeArea;
     }
 
+    private void saveFileButtonActionPerformed(java.awt.event.ActionEvent evt) {
+        try {
+            saveFile();
+        } catch (IOException ex) {
+            Logger.getLogger(BinaryEditorPanel.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
     private void loadFromPreferences() {
         try {
-            fileHandlingMode = FileHandlingMode.valueOf(preferences.getEditorParameters().getFileHandlingMode());
+            fileHandlingMode = preferences.getEditorPreferences().getFileHandlingMode();
         } catch (Exception ex) {
             fileHandlingMode = DEFAULT_FILE_HANDLING_MODE;
         }
         CodeAreaOptions codeAreaOptions = new CodeAreaOptions();
-        codeAreaOptions.loadFromParameters(preferences.getCodeAreaParameters());
+        codeAreaOptions.loadFromParameters(preferences.getCodeAreaPreferences());
         codeAreaOptions.applyToCodeArea(codeArea);
-        String selectedEncoding = preferences.getCodeAreaParameters().getSelectedEncoding();
+        String selectedEncoding = preferences.getEncodingPreferences().getSelectedEncoding();
         statusPanel.setEncoding(selectedEncoding);
-        statusPanel.loadFromPreferences(preferences.getStatusParameters());
+        statusPanel.loadFromPreferences(preferences.getStatusPreferences());
         toolbarPanel.loadFromPreferences();
 
         codeArea.setCharset(Charset.forName(selectedEncoding));
-        encodingsHandler.loadFromPreferences(preferences);
+        encodingsHandler.loadFromPreferences(preferences.getEncodingPreferences());
 
-        int selectedLayoutProfile = preferences.getLayoutParameters().getSelectedProfile();
+        int selectedLayoutProfile = preferences.getLayoutPreferences().getSelectedProfile();
         if (selectedLayoutProfile >= 0) {
-            codeArea.setLayoutProfile(preferences.getLayoutParameters().getLayoutProfile(selectedLayoutProfile));
+            codeArea.setLayoutProfile(preferences.getLayoutPreferences().getLayoutProfile(selectedLayoutProfile));
         }
 
-        int selectedThemeProfile = preferences.getThemeParameters().getSelectedProfile();
+        int selectedThemeProfile = preferences.getThemePreferences().getSelectedProfile();
         if (selectedThemeProfile >= 0) {
-            codeArea.setThemeProfile(preferences.getThemeParameters().getThemeProfile(selectedThemeProfile));
+            codeArea.setThemeProfile(preferences.getThemePreferences().getThemeProfile(selectedThemeProfile));
         }
 
-        int selectedColorProfile = preferences.getColorParameters().getSelectedProfile();
+        int selectedColorProfile = preferences.getColorPreferences().getSelectedProfile();
         if (selectedColorProfile >= 0) {
-            codeArea.setColorsProfile(preferences.getColorParameters().getColorsProfile(selectedColorProfile));
+            codeArea.setColorsProfile(preferences.getColorPreferences().getColorsProfile(selectedColorProfile));
         }
 
         // Memory mode handled from outside by isDeltaMemoryMode() method, worth fixing?
-        boolean showValuesPanel = preferences.getEditorParameters().isShowValuesPanel();
+        boolean showValuesPanel = preferences.getEditorPreferences().isShowValuesPanel();
         if (showValuesPanel) {
             showValuesPanel();
         }
