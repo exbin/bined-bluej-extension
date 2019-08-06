@@ -58,46 +58,46 @@ public class BareBonesBrowserLaunch {
     }
 
     public static void openDesktopURL(String url) {
-        java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-
-        if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
-            try {
-                java.net.URI uri = new java.net.URI(url);
-                desktop.browse(uri);
-            } catch (IOException | URISyntaxException ex) {
-                Logger.getLogger(BareBonesBrowserLaunch.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        } else {
+//        java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+//
+//        if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+//            try {
+//                java.net.URI uri = new java.net.URI(url);
+//                desktop.browse(uri);
+//            } catch (IOException | URISyntaxException ex) {
+//                Logger.getLogger(BareBonesBrowserLaunch.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//        } else {
             BareBonesBrowserLaunch.openURL(url);
-        }
+//        }
     }
 
     public static void openDesktopURL(URI uri) {
-        java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-
-        if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
-            try {
-                desktop.browse(uri);
-            } catch (IOException ex) {
-                Logger.getLogger(BareBonesBrowserLaunch.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        } else {
+//        java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+//
+//        if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+//            try {
+//                desktop.browse(uri);
+//            } catch (IOException ex) {
+//                Logger.getLogger(BareBonesBrowserLaunch.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//        } else {
             BareBonesBrowserLaunch.openURL(uri.toString());
-        }
+//        }
     }
 
     public static void openDesktopURL(URL url) {
-        java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-
-        if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
-            try {
-                java.net.URI uri = url.toURI();
-                desktop.browse(uri);
-            } catch (IOException | URISyntaxException ex) {
-                Logger.getLogger(BareBonesBrowserLaunch.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        } else {
+//        java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+//
+//        if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+//            try {
+//                java.net.URI uri = url.toURI();
+//                desktop.browse(uri);
+//            } catch (IOException | URISyntaxException ex) {
+//                Logger.getLogger(BareBonesBrowserLaunch.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//        } else {
             BareBonesBrowserLaunch.openURL(url.toString());
-        }
+//        }
     }
 }

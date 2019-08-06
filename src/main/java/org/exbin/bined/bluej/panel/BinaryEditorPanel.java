@@ -79,6 +79,7 @@ import org.exbin.framework.bined.options.CodeAreaOptions;
 import org.exbin.framework.bined.options.EditorOptions;
 import org.exbin.framework.bined.options.StatusOptions;
 import org.exbin.framework.gui.about.panel.AboutPanel;
+import org.exbin.framework.gui.utils.ActionUtils;
 import org.exbin.framework.gui.utils.WindowUtils.DialogWrapper;
 import org.exbin.framework.gui.utils.panel.CloseControlPanel;
 import org.exbin.utils.binary_data.ByteArrayEditableData;
@@ -102,7 +103,6 @@ public final class BinaryEditorPanel extends JPanel {
     private final ExtCodeArea codeArea;
     private final CodeAreaUndoHandler undoHandler;
 //    private final InstanceContent content = new InstanceContent();
-    private final int metaMask;
 
     private BinEdToolbarPanel toolbarPanel;
     private BinaryStatusPanel statusPanel;
@@ -143,6 +143,7 @@ public final class BinaryEditorPanel extends JPanel {
         registerEncodingStatus(statusPanel);
         encodingsHandler = new EncodingsHandler();
         encodingsHandler.init();
+        encodingsHandler.setParentComponent(this);
         encodingsHandler.setTextEncodingStatus(new TextEncodingStatusApi() {
             @Override
             public String getEncoding() {
@@ -168,6 +169,7 @@ public final class BinaryEditorPanel extends JPanel {
         add(statusPanel, BorderLayout.SOUTH);
         registerBinaryStatus(statusPanel);
         goToRowAction = new GoToPositionAction(codeArea);
+        goToRowAction.setParentComponent(this);
         showHeaderAction = new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -221,14 +223,6 @@ public final class BinaryEditorPanel extends JPanel {
         });
         toolbarPanel.updateUndoState();
 
-        int metaMaskValue;
-        try {
-            metaMaskValue = java.awt.Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
-        } catch (java.awt.HeadlessException ex) {
-            metaMaskValue = java.awt.Event.CTRL_MASK;
-        }
-        metaMask = metaMaskValue;
-
         searchAction = new SearchAction(codeArea, codeAreaPanel);
         codeArea.addDataChangedListener(() -> {
             searchAction.codeAreaDataChanged();
@@ -259,16 +253,16 @@ public final class BinaryEditorPanel extends JPanel {
         codeArea.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent keyEvent) {
-                if (keyEvent.getModifiers() == metaMask) {
+                if (keyEvent.getModifiers() == ActionUtils.getMetaMask()) {
                     int keyCode = keyEvent.getKeyCode();
                     switch (keyCode) {
                         case KeyEvent.VK_F: {
-                            searchAction.actionPerformed(null);
+                            searchAction.actionPerformed(new ActionEvent(this, 0, ""));
                             searchAction.switchReplaceMode(BinarySearchPanel.SearchOperation.FIND);
                             break;
                         }
                         case KeyEvent.VK_G: {
-                            goToRowAction.actionPerformed(null);
+                            goToRowAction.actionPerformed(new ActionEvent(this, 0, ""));
                             break;
                         }
                     }
@@ -294,7 +288,7 @@ public final class BinaryEditorPanel extends JPanel {
 
             @Override
             public void changeCursorPosition() {
-                goToRowAction.actionPerformed(null);
+                goToRowAction.actionPerformed(new ActionEvent(this, 0, ""));
             }
 
             @Override
@@ -625,7 +619,7 @@ public final class BinaryEditorPanel extends JPanel {
             }
             default: {
                 final JMenuItem cutMenuItem = new JMenuItem("Cut");
-                cutMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, metaMask));
+                cutMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionUtils.getMetaMask()));
                 cutMenuItem.setEnabled(codeArea.hasSelection() && codeArea.isEditable());
                 cutMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.cut();
@@ -634,7 +628,7 @@ public final class BinaryEditorPanel extends JPanel {
                 result.add(cutMenuItem);
 
                 final JMenuItem copyMenuItem = new JMenuItem("Copy");
-                copyMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, metaMask));
+                copyMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionUtils.getMetaMask()));
                 copyMenuItem.setEnabled(codeArea.hasSelection());
                 copyMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.copy();
@@ -651,7 +645,7 @@ public final class BinaryEditorPanel extends JPanel {
                 result.add(copyAsCodeMenuItem);
 
                 final JMenuItem pasteMenuItem = new JMenuItem("Paste");
-                pasteMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, metaMask));
+                pasteMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionUtils.getMetaMask()));
                 pasteMenuItem.setEnabled(codeArea.canPaste() && codeArea.isEditable());
                 pasteMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.paste();
@@ -682,7 +676,7 @@ public final class BinaryEditorPanel extends JPanel {
                 result.addSeparator();
 
                 final JMenuItem selectAllMenuItem = new JMenuItem("Select All");
-                selectAllMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, metaMask));
+                selectAllMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionUtils.getMetaMask()));
                 selectAllMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.selectAll();
                     result.setVisible(false);
@@ -694,7 +688,7 @@ public final class BinaryEditorPanel extends JPanel {
                 result.add(goToMenuItem);
 
                 final JMenuItem findMenuItem = new JMenuItem("Find...");
-                findMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, metaMask));
+                findMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ActionUtils.getMetaMask()));
                 findMenuItem.addActionListener((ActionEvent e) -> {
                     searchAction.actionPerformed(e);
                     searchAction.switchReplaceMode(BinarySearchPanel.SearchOperation.FIND);
@@ -702,7 +696,7 @@ public final class BinaryEditorPanel extends JPanel {
                 result.add(findMenuItem);
 
                 final JMenuItem replaceMenuItem = new JMenuItem("Replace...");
-                replaceMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, metaMask));
+                replaceMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, ActionUtils.getMetaMask()));
                 replaceMenuItem.setEnabled(codeArea.isEditable());
                 replaceMenuItem.addActionListener((ActionEvent e) -> {
                     searchAction.actionPerformed(e);
@@ -732,7 +726,8 @@ public final class BinaryEditorPanel extends JPanel {
 
         final JMenuItem optionsMenuItem = new JMenuItem("Options...");
         optionsMenuItem.addActionListener((ActionEvent e) -> {
-            final BinEdOptionsPanelBorder optionsPanel = new BinEdOptionsPanelBorder(preferences);
+            final BinEdOptionsPanelBorder optionsPanel = new BinEdOptionsPanelBorder();
+            optionsPanel.setPreferences(preferences);
             optionsPanel.load();
             optionsPanel.setApplyOptions(getApplyOptions());
             OptionsControlPanel optionsControlPanel = new OptionsControlPanel();
@@ -786,7 +781,7 @@ public final class BinaryEditorPanel extends JPanel {
     @Nonnull
     private JMenuItem createGoToMenuItem() {
         final JMenuItem goToMenuItem = new JMenuItem("Go To...");
-        goToMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, metaMask));
+        goToMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ActionUtils.getMetaMask()));
         goToMenuItem.addActionListener(goToRowAction);
         return goToMenuItem;
     }

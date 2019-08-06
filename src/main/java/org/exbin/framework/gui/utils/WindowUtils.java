@@ -132,7 +132,6 @@ public class WindowUtils {
     @Nonnull
     public static DialogWrapper createDialog(final JComponent component, Component parent, String dialogTitle, Dialog.ModalityType modalityType) {
         JDialog dialog = new JDialog(getWindow(parent), modalityType);
-        dialog.setTitle(dialogTitle);
         dialog.add(component);
         Dimension size = component.getPreferredSize();
         dialog.setSize(size.width + 8, size.height + 24);

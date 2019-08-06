@@ -89,7 +89,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel {
         categoryModel.addElement(new CategoryItem("Editor", editorParametersPanel));
         categoryModel.addElement(new CategoryItem("Status Panel", statusParametersPanel));
         categoryModel.addElement(new CategoryItem("Code Area", codeAreaParametersPanel));
-        categoryModel.addElement(new CategoryItem("Charset", encodingParametersPanel));
+        categoryModel.addElement(new CategoryItem("Encoding", encodingParametersPanel));
         categoryModel.addElement(new CategoryItem("Layout Profiles", layoutSelectionPanel));
         categoryModel.addElement(new CategoryItem("Theme Profiles", themeSelectionPanel));
         categoryModel.addElement(new CategoryItem("Colors Profiles", colorSelectionPanel));

@@ -43,9 +43,14 @@ public class GoToPositionAction implements ActionListener {
 
     private final ResourceBundle resourceBundle = LanguageUtils.getResourceBundleByClass(GoToBinaryPanel.class);
     private final ExtCodeArea codeArea;
+    private Component parentComponent;
 
     public GoToPositionAction(ExtCodeArea codeArea) {
         this.codeArea = Objects.requireNonNull(codeArea);
+    }
+    
+    public void setParentComponent(Component parentComponent) {
+        this.parentComponent = parentComponent;
     }
 
     @Override
@@ -55,13 +60,13 @@ public class GoToPositionAction implements ActionListener {
         goToPanel.setCursorPosition(codeArea.getCaretPosition().getDataPosition());
         goToPanel.setMaxPosition(codeArea.getDataSize());
         JPanel dialogPanel = WindowUtils.createDialogPanel(goToPanel, goToControlPanel);
-        final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, (Component) event.getSource(), resourceBundle.getString("dialog.title"), Dialog.ModalityType.APPLICATION_MODAL);
+        final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parentComponent, resourceBundle.getString("dialog.title"), Dialog.ModalityType.APPLICATION_MODAL);
 
         goToPanel.initFocus();
         goToControlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
             if (actionType == DefaultControlHandler.ControlActionType.OK) {
                 goToPanel.acceptInput();
-                codeArea.setCaretPosition(goToPanel.getGoToPosition());
+                codeArea.setCaretPosition(goToPanel.getTargetPosition());
                 PositionScrollVisibility visibility = codeArea.getPainter().computePositionScrollVisibility(codeArea.getCaretPosition());
                 if (visibility != PositionScrollVisibility.VISIBLE) {
                     codeArea.centerOnCursor();
@@ -70,6 +75,6 @@ public class GoToPositionAction implements ActionListener {
 
             dialog.close();
         });
-        dialog.showCentered((Component) event.getSource());
+        dialog.showCentered(parentComponent);
     }
 }

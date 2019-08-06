@@ -29,8 +29,11 @@ import org.exbin.framework.bined.preferences.BinaryEditorPreferences;
 @ParametersAreNonnullByDefault
 public class BinEdOptionsPanelBorder extends javax.swing.JPanel {
 
-    public BinEdOptionsPanelBorder(BinaryEditorPreferences preferences) {
+    public BinEdOptionsPanelBorder() {
         initComponents();
+    }
+    
+    public void setPreferences(BinaryEditorPreferences preferences) {
         optionsPanel.setPreferences(preferences);
     }
 
