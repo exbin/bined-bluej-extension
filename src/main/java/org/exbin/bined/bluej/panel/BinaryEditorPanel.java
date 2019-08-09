@@ -440,7 +440,7 @@ public final class BinaryEditorPanel extends JPanel {
      *
      * @return true if successful
      */
-    private boolean releaseFile() {
+    public boolean releaseFile() {
 
         if (fileName == null) {
             return true;
@@ -751,11 +751,15 @@ public final class BinaryEditorPanel extends JPanel {
             DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, WindowUtils.getWindow(this), "Options", Dialog.ModalityType.APPLICATION_MODAL);
             optionsControlPanel.setHandler((OptionsControlHandler.ControlActionType actionType) -> {
                 if (actionType != OptionsControlHandler.ControlActionType.CANCEL) {
+                    try {
                     optionsPanel.applyToOptions();
                     if (actionType == OptionsControlHandler.ControlActionType.SAVE) {
                         optionsPanel.saveToPreferences();
                     }
-                    applyOptions(optionsPanel);
+                        applyOptions(optionsPanel);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(dialogPanel, ex.getMessage());
+                    }
                     codeArea.repaint();
                 }
 

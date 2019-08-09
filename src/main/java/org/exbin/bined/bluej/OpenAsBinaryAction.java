@@ -60,6 +60,19 @@ public class OpenAsBinaryAction extends AbstractAction {
         closeControlPanel.setHandler(() -> {
             dialog.close();
         });
+        ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        ((JDialog) dialog.getWindow()).addWindowListener(new WindowAdapter() {
+            boolean termination = false;
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (!termination && editorPanel.releaseFile()) {
+                    termination = true;
+                    ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+                    dialog.close();
+                }
+            }
+        });
         //            dialog.setSize(650, 460);
 
         try {
@@ -83,5 +96,6 @@ public class OpenAsBinaryAction extends AbstractAction {
             Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
         }
         dialog.showCentered(frame);
+        dialog.dispose();
     }
 }
