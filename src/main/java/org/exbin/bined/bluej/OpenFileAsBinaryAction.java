@@ -25,9 +25,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.exbin.bined.bluej.panel.BinaryEditorPanel;
-import org.exbin.framework.gui.utils.WindowUtils;
-import org.exbin.framework.gui.utils.panel.CloseControlPanel;
+import org.exbin.bined.bluej.gui.BinEdComponentPanel;
+import org.exbin.framework.utils.WindowUtils;
+import org.exbin.framework.utils.gui.CloseControlPanel;
 
 /**
  * Open file as binary action.
@@ -59,7 +59,7 @@ public class OpenFileAsBinaryAction extends AbstractAction {
         if (result == JFileChooser.APPROVE_OPTION) {
             File openedFile = fileChooser.getSelectedFile();
             previousPath = fileChooser.getCurrentDirectory();
-            BinaryEditorPanel editorPanel = new BinaryEditorPanel(bluej);
+            BinEdComponentPanel editorPanel = new BinEdComponentPanel(bluej);
             CloseControlPanel closeControlPanel = new CloseControlPanel();
             JPanel dialogPanel = WindowUtils.createDialogPanel(editorPanel, closeControlPanel);
             WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, frame, "Binary Editor", Dialog.ModalityType.APPLICATION_MODAL);

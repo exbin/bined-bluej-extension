@@ -23,7 +23,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.Immutable;
 import org.exbin.bined.swing.extended.color.ExtendedCodeAreaColorProfile;
 import org.exbin.framework.bined.preferences.CodeAreaColorPreferences;
-import org.exbin.framework.gui.options.api.OptionsData;
+import org.exbin.framework.options.api.OptionsData;
 
 /**
  * Code area theme options.
@@ -84,7 +84,7 @@ public class CodeAreaColorOptionsImpl implements OptionsData, CodeAreaColorOptio
         }
         profileRecords.remove(index);
     }
-    
+
     public void fullyLoad() {
         for (int i = 0; i < profileRecords.size(); i++) {
             ProfileRecord record = profileRecords.get(i);
@@ -94,7 +94,7 @@ public class CodeAreaColorOptionsImpl implements OptionsData, CodeAreaColorOptio
             }
         }
     }
-    
+
     @Override
     public int getSelectedProfile() {
         return selectedProfile;

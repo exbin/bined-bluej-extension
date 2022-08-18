@@ -29,9 +29,9 @@ import java.awt.event.*;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.exbin.bined.bluej.panel.BinaryEditorPanel;
-import org.exbin.framework.gui.utils.WindowUtils;
-import org.exbin.framework.gui.utils.panel.CloseControlPanel;
+import org.exbin.bined.bluej.gui.BinEdComponentPanel;
+import org.exbin.framework.utils.WindowUtils;
+import org.exbin.framework.utils.gui.CloseControlPanel;
 
 /**
  * Open as binary action.
@@ -53,7 +53,7 @@ public class OpenAsBinaryAction extends AbstractAction {
     public void actionPerformed(ActionEvent anEvent) {
         BlueJ bluej = menuHandler.getBlueJ();
         Frame frame = bluej.getCurrentFrame();
-        BinaryEditorPanel editorPanel = new BinaryEditorPanel(bluej);
+        BinEdComponentPanel editorPanel = new BinEdComponentPanel(bluej);
         CloseControlPanel closeControlPanel = new CloseControlPanel();
         JPanel dialogPanel = WindowUtils.createDialogPanel(editorPanel, closeControlPanel);
         WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, frame, "Binary Editor", Dialog.ModalityType.APPLICATION_MODAL);

@@ -31,16 +31,16 @@ import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
 import org.exbin.bined.DefaultCodeAreaCaretPosition;
 import org.exbin.bined.highlight.swing.extended.ExtendedHighlightCodeAreaPainter;
-import org.exbin.bined.bluej.panel.BinarySearchPanel;
-import org.exbin.bined.bluej.panel.BinarySearchPanelApi;
+import org.exbin.bined.bluej.gui.BinarySearchPanel;
+import org.exbin.bined.bluej.gui.BinarySearchPanelApi;
 import org.exbin.bined.swing.extended.ExtCodeArea;
 import org.exbin.framework.bined.handler.CodeAreaPopupMenuHandler;
 import org.exbin.framework.bined.ReplaceParameters;
 import org.exbin.framework.bined.SearchCondition;
 import org.exbin.framework.bined.SearchParameters;
-import org.exbin.framework.gui.utils.ActionUtils;
-import org.exbin.utils.binary_data.BinaryData;
-import org.exbin.utils.binary_data.EditableBinaryData;
+import org.exbin.framework.utils.ActionUtils;
+import org.exbin.auxiliary.paged_data.BinaryData;
+import org.exbin.auxiliary.paged_data.EditableBinaryData;
 
 /**
  * Search action.

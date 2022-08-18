@@ -24,7 +24,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import javax.swing.*;
 import java.awt.event.*;
 import java.util.ResourceBundle;
-import org.exbin.framework.gui.utils.LanguageUtils;
+import org.exbin.framework.utils.LanguageUtils;
 
 /**
  * BinEd BlueJ Extension class.

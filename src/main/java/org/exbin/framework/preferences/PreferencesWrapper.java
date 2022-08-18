@@ -15,121 +15,147 @@
  */
 package org.exbin.framework.preferences;
 
-import bluej.extensions.BlueJ;
-import java.util.Base64;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.exbin.framework.api.Preferences;
+import java.util.prefs.BackingStoreException;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
-import org.exbin.framework.api.Preferences;
 
 /**
  * Wrapper for preferences.
  *
- * @version 0.2.0 2019/07/22
+ * @version 0.2.0 2019/06/09
  * @author ExBin Project (http://exbin.org)
  */
 @ParametersAreNonnullByDefault
 public class PreferencesWrapper implements Preferences {
 
-    private final BlueJ bluej;
+    private final java.util.prefs.Preferences preferences;
 
-    public PreferencesWrapper(BlueJ bluej) {
-        this.bluej = bluej;
+    public PreferencesWrapper(java.util.prefs.Preferences preferences) {
+        this.preferences = preferences;
     }
 
     @Override
     public boolean exists(String key) {
-        return bluej.getExtensionPropertyString(key, null) != null;
+        return preferences.get(key, null) != null;
+    }
+
+    @Nonnull
+    @Override
+    public Optional<String> get(String key) {
+        return Optional.ofNullable(preferences.get(key, null));
+    }
+
+    @Nonnull
+    @Override
+    public String get(String key, String def) {
+        return preferences.get(key, def);
     }
 
     @Override
-    public String get(String key) {
-        return get(key, null);
+    public void remove(String key) {
+        preferences.remove(key);
     }
 
     @Override
-    public String get(String key, @Nullable String def) {
-        return bluej.getExtensionPropertyString(key, def);
+    public void putInt(String key, int value) {
+        preferences.putInt(key, value);
+    }
+
+    @Override
+    public int getInt(String key, int def) {
+        return preferences.getInt(key, def);
+    }
+
+    @Override
+    public void putLong(String key, long value) {
+        preferences.putLong(key, value);
+    }
+
+    @Override
+    public long getLong(String key, long def) {
+        return preferences.getLong(key, def);
+    }
+
+    @Override
+    public void putBoolean(String key, boolean value) {
+        preferences.putBoolean(key, value);
+    }
+
+    @Override
+    public boolean getBoolean(String key, boolean def) {
+        return preferences.getBoolean(key, def);
+    }
+
+    @Override
+    public void putFloat(String key, float value) {
+        preferences.putFloat(key, value);
+    }
+
+    @Override
+    public float getFloat(String key, float def) {
+        return preferences.getFloat(key, def);
+    }
+
+    @Override
+    public void putDouble(String key, double value) {
+        preferences.putDouble(key, value);
+    }
+
+    @Override
+    public double getDouble(String key, double def) {
+        return preferences.getDouble(key, def);
+    }
+
+    @Override
+    public void putByteArray(String key, byte[] value) {
+        preferences.putByteArray(key, value);
+    }
+
+    @Override
+    public byte[] getByteArray(String key, byte[] def) {
+        return preferences.getByteArray(key, def);
     }
 
     @Override
     public void put(String key, @Nullable String value) {
         if (value == null) {
-            bluej.setExtensionPropertyString(key, null);
+            preferences.remove(key);
         } else {
-            bluej.setExtensionPropertyString(key, value);
+            preferences.put(key, value);
         }
     }
 
-    @Override
-    public void remove(String key) {
-        bluej.setExtensionPropertyString(key, null);
-    }
-
-    @Override
-    public void putInt(String key, int value) {
-        bluej.setExtensionPropertyString(key, String.valueOf(value));
-    }
-
-    @Override
-    public int getInt(String key, int def) {
-        return Integer.valueOf(bluej.getExtensionPropertyString(key, String.valueOf(def)));
-    }
-
-    @Override
-    public void putLong(String key, long value) {
-        bluej.setExtensionPropertyString(key, String.valueOf(value));
-    }
-
-    @Override
-    public long getLong(String key, long def) {
-        return Long.valueOf(bluej.getExtensionPropertyString(key, String.valueOf(def)));
-    }
-
-    @Override
-    public void putBoolean(String key, boolean value) {
-        bluej.setExtensionPropertyString(key, String.valueOf(value));
-    }
-
-    @Override
-    public boolean getBoolean(String key, boolean def) {
-        return Boolean.valueOf(bluej.getExtensionPropertyString(key, String.valueOf(def)));
-    }
-
-    @Override
-    public void putFloat(String key, float value) {
-        bluej.setExtensionPropertyString(key, String.valueOf(value));
-    }
-
-    @Override
-    public float getFloat(String key, float def) {
-        return Float.valueOf(bluej.getExtensionPropertyString(key, String.valueOf(def)));
-    }
-
-    @Override
-    public void putDouble(String key, double value) {
-        bluej.setExtensionPropertyString(key, String.valueOf(value));
-    }
-
-    @Override
-    public double getDouble(String key, double def) {
-        return Double.valueOf(bluej.getExtensionPropertyString(key, String.valueOf(def)));
-    }
-
-    @Override
-    public void putByteArray(String key, byte[] value) {
-        bluej.setExtensionPropertyString(key, Base64.getEncoder().encodeToString(value));
-    }
-
-    @Override
-    public byte[] getByteArray(String key, byte[] def) {
-        return Base64.getDecoder().decode(bluej.getExtensionPropertyString(key, Base64.getEncoder().encodeToString(def)));
-    }
-
+    /**
+     * Makes any changes permanent (stores cached changes to permanent storage).
+     */
     @Override
     public void flush() {
+        try {
+            preferences.flush();
+        } catch (BackingStoreException ex) {
+            Logger.getLogger(PreferencesWrapper.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
+    /**
+     * Forces reloading of cache from permanent storage.
+     */
     @Override
     public void sync() {
+        try {
+            preferences.sync();
+        } catch (BackingStoreException ex) {
+            Logger.getLogger(PreferencesWrapper.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    @Nonnull
+    public java.util.prefs.Preferences getInnerPreferences() {
+        return preferences;
     }
 }

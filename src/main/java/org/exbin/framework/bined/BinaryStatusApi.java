@@ -1,33 +1,32 @@
 /*
  * Copyright (C) ExBin Project
  *
- * This application or library is free software: you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the License,
- * or (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This application or library is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU Lesser General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along this application.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.exbin.framework.bined;
 
-import java.awt.event.MouseEvent;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import org.exbin.bined.CodeAreaCaretPosition;
-import org.exbin.bined.EditationMode;
-import org.exbin.bined.EditationOperation;
+import org.exbin.bined.EditMode;
+import org.exbin.bined.EditOperation;
+import org.exbin.bined.SelectionRange;
 
 /**
- * Hexadecimal editor status interface.
+ * Binary editor status interface.
  *
- * @version 0.2.1 2019/06/16
+ * @version 0.2.1 2021/08/13
  * @author ExBin Project (http://exbin.org)
  */
 @ParametersAreNonnullByDefault
@@ -41,19 +40,19 @@ public interface BinaryStatusApi {
     void setCursorPosition(CodeAreaCaretPosition cursorPosition);
 
     /**
-     * Reports currently active editation mode.
+     * Sets current selection.
      *
-     * @param mode editation mode
-     * @param operation editation operation
+     * @param selectionRange current selection
      */
-    void setEditationMode(EditationMode mode, EditationOperation operation);
+    void setSelectionRange(SelectionRange selectionRange);
 
     /**
-     * Sets control handler for status operations.
+     * Reports currently active edit mode.
      *
-     * @param statusControlHandler status control handler
+     * @param mode edit mode
+     * @param operation edit operation
      */
-    void setControlHandler(StatusControlHandler statusControlHandler);
+    void setEditMode(EditMode mode, EditOperation operation);
 
     /**
      * Sets current document size.
@@ -71,46 +70,12 @@ public interface BinaryStatusApi {
     void setMemoryMode(MemoryMode memoryMode);
 
     @ParametersAreNonnullByDefault
-    public static interface StatusControlHandler {
-
-        /**
-         * Requests change of editation mode from given mode.
-         *
-         * @param operation editation operation
-         */
-        void changeEditationOperation(EditationOperation operation);
-
-        /**
-         * Requests change of cursor position using go-to dialog.
-         */
-        void changeCursorPosition();
-
-        /**
-         * Switches to next encoding in defined list.
-         */
-        void cycleEncodings();
-
-        /**
-         * Handles encodings popup menu.
-         *
-         * @param mouseEvent mouse event
-         */
-        void encodingsPopupEncodingsMenu(MouseEvent mouseEvent);
-
-        /**
-         * Requests change of memory mode.
-         *
-         * @param memoryMode memory mode
-         */
-        void changeMemoryMode(MemoryMode memoryMode);
-    }
-
-    @ParametersAreNonnullByDefault
-    public static enum MemoryMode {
+    public enum MemoryMode {
 
         READ_ONLY("R", "read_only"),
         RAM_MEMORY("M", "ram"),
-        DELTA_MODE("\u0394", "delta");
+        DELTA_MODE("\u0394", "delta"),
+        NATIVE("N", "native");
 
         private final String displayChar;
         private final String value;
