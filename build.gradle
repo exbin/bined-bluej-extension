@@ -4,6 +4,12 @@ buildscript {
     repositories {
         mavenLocal()
         jcenter()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }    
+    }
+    dependencies {
+        classpath("org.openjfx:javafx-plugin:0.0.10")
     }
 }
 
@@ -11,6 +17,8 @@ buildscript {
     apply plugin: it
 }
 import org.gradle.util.VersionNumber
+
+apply plugin: "org.openjfx.javafxplugin"
 
 String binedVersion = '0.2.1-SNAPSHOT';
 
@@ -79,8 +87,13 @@ repositories {
     }
 }
 
+javafx {
+    version = "11"
+    modules = [ 'javafx.controls', 'javafx.graphics' ]
+}
+
 dependencies {
-    compile ':bluejext'
+    compile ':bluejext2'
     compile ":bined-core-${binedVersion}"
     compile ":bined-extended-${binedVersion}"
     compile ":bined-highlight-swing-${binedVersion}"

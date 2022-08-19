@@ -15,15 +15,18 @@
  */
 package org.exbin.bined.bluej;
 
-import bluej.extensions.*;
-import bluej.extensions.event.*;
-import bluej.extensions.editor.*;
+import bluej.extensions2.*;
+import bluej.extensions2.event.*;
+import bluej.extensions2.editor.*;
+import javafx.scene.layout.Pane;
 
 import java.net.URL;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.swing.*;
 import java.awt.event.*;
 import java.util.ResourceBundle;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import org.exbin.framework.utils.LanguageUtils;
 
 /**
@@ -133,7 +136,7 @@ public class BinEdExtension extends Extension implements PackageListener {
  */
 class Preferences implements PreferenceGenerator {
 
-    private JPanel preferencesPanel;
+    private Pane preferencesPanel;
 //    private JTextField color;
     private BlueJ bluej;
 //    public static final String PROFILE_LABEL = "Favorite-Colour";
@@ -141,8 +144,8 @@ class Preferences implements PreferenceGenerator {
     // Construct the panel, and initialise it from any stored values
     public Preferences(BlueJ bluej) {
         this.bluej = bluej;
-        preferencesPanel = new JPanel();
-        preferencesPanel.add(new JLabel("No preferences"));
+        preferencesPanel = new Pane();
+        preferencesPanel.getChildren().add(new Label("No preferences"));
     //        color = new JTextField(40);
 //        myPanel.add(color);
         // Load the default value
@@ -150,7 +153,7 @@ class Preferences implements PreferenceGenerator {
     }
 
     @Override
-    public JPanel getPanel() {
+    public Pane getWindow() {
         return preferencesPanel;
     }
 
@@ -186,41 +189,53 @@ class MenuBuilder extends MenuGenerator implements BlueJMenuHandler {
     }
 
     @Override
-    public JMenuItem getToolsMenuItem(BPackage aPackage) {
-        JMenuItem openFileAsBinary = new JMenuItem(new OpenFileAsBinaryAction(this));
+    public MenuItem getToolsMenuItem(BPackage aPackage) {
+        OpenFileAsBinaryAction openFileAsBinaryAction = new OpenFileAsBinaryAction(this);
+        MenuItem openFileAsBinary = new MenuItem((String) openFileAsBinaryAction.getValue(Action.NAME));
+        openFileAsBinary.setOnAction((event) -> {
+            openFileAsBinaryAction.actionPerformed(null);
+        });
         return openFileAsBinary;
     }
 
     @Override
-    public JMenuItem getClassMenuItem(BClass aClass) {
-        JMenuItem openAsBinary = new JMenuItem(new OpenAsBinaryAction(this));
+    public MenuItem getClassMenuItem(BClass aClass) {
+        OpenAsBinaryAction openAsBinaryAction = new OpenAsBinaryAction(this);
+        MenuItem openAsBinary = new MenuItem((String) openAsBinaryAction.getValue(Action.NAME));
+        openAsBinary.setOnAction((event) -> {
+            openAsBinaryAction.actionPerformed(null);
+        });
         return openAsBinary;
     }
 
     @Override
-    public JMenuItem getObjectMenuItem(BObject anObject) {
-        JMenuItem openAsBinary = new JMenuItem(new OpenAsBinaryAction(this));
+    public MenuItem getObjectMenuItem(BObject anObject) {
+        OpenAsBinaryAction openAsBinaryAction = new OpenAsBinaryAction(this);
+        MenuItem openAsBinary = new MenuItem((String) openAsBinaryAction.getValue(Action.NAME));
+        openAsBinary.setOnAction((event) -> {
+            openAsBinaryAction.actionPerformed(null);
+        });
         return openAsBinary;
     }
 
     // These methods will be called when
     // each of the different menus are about to be invoked.
     @Override
-    public void notifyPostToolsMenu(BPackage bp, JMenuItem jmi) {
+    public void notifyPostToolsMenu(BPackage bp, MenuItem jmi) {
         curPackage = bp;
         curClass = null;
         curObject = null;
     }
 
     @Override
-    public void notifyPostClassMenu(BClass bc, JMenuItem jmi) {
+    public void notifyPostClassMenu(BClass bc, MenuItem jmi) {
         curPackage = null;
         curClass = bc;
         curObject = null;
     }
 
     @Override
-    public void notifyPostObjectMenu(BObject bo, JMenuItem jmi) {
+    public void notifyPostObjectMenu(BObject bo, MenuItem jmi) {
         curPackage = null;
         curClass = null;
         curObject = bo;
@@ -254,9 +269,9 @@ class MenuBuilder extends MenuGenerator implements BlueJMenuHandler {
 
     // A method to add a comment at the end of the current class, using the Editor API
     private void addComment() {
-        Editor classEditor = null;
+        JavaEditor classEditor = null;
         try {
-            classEditor = curClass.getEditor();
+            classEditor = curClass.getJavaEditor();
         } catch (Exception e) {
         }
         if (classEditor == null) {

@@ -15,12 +15,13 @@
  */
 package org.exbin.bined.bluej;
 
-import bluej.extensions.BClass;
-import bluej.extensions.BObject;
-import bluej.extensions.BlueJ;
-import bluej.extensions.ClassNotFoundException;
-import bluej.extensions.PackageNotFoundException;
-import bluej.extensions.ProjectNotOpenException;
+import bluej.extensions2.BClass;
+import bluej.extensions2.BObject;
+import bluej.extensions2.BPackage;
+import bluej.extensions2.BlueJ;
+import bluej.extensions2.ClassNotFoundException;
+import bluej.extensions2.PackageNotFoundException;
+import bluej.extensions2.ProjectNotOpenException;
 import java.awt.Dialog;
 import java.awt.Frame;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -52,8 +53,33 @@ public class OpenAsBinaryAction extends AbstractAction {
     @Override
     public void actionPerformed(ActionEvent anEvent) {
         BlueJ bluej = menuHandler.getBlueJ();
-        Frame frame = bluej.getCurrentFrame();
-        BinEdComponentPanel editorPanel = new BinEdComponentPanel(bluej);
+        BPackage currentPackage = bluej.getCurrentPackage();
+        BinEdFile file = null;
+        try {
+            BClass curClass = menuHandler.getCurClass();
+            if (curClass != null) {
+                file = new BinEdFile(bluej);
+                file.openDocument(curClass.getJavaFile());
+            } else {
+                BObject curObject = menuHandler.getCurObject();
+                if (curObject != null) {
+                    file = new BinEdFile(bluej);
+                    file.openDocument(curObject.getBClass().getJavaFile());
+                }
+            }
+
+        } catch (IOException ex) {
+            Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ProjectNotOpenException ex) {
+            Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (PackageNotFoundException ex) {
+            Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        Frame frame = new JFrame();
+        BinEdComponentPanel editorPanel = file != null ? file.getComponentPanel() : new BinEdComponentPanel(bluej);
         CloseControlPanel closeControlPanel = new CloseControlPanel();
         JPanel dialogPanel = WindowUtils.createDialogPanel(editorPanel, closeControlPanel);
         WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, frame, "Binary Editor", Dialog.ModalityType.APPLICATION_MODAL);
@@ -75,27 +101,9 @@ public class OpenAsBinaryAction extends AbstractAction {
         });
         //            dialog.setSize(650, 460);
 
-        try {
-            BClass curClass = menuHandler.getCurClass();
-            if (curClass != null) {
-                editorPanel.openFile(curClass.getJavaFile());
-            } else {
-                BObject curObject = menuHandler.getCurObject();
-                if (curObject != null) {
-                    editorPanel.openFile(curObject.getBClass().getJavaFile());
-                }
-            }
-
-        } catch (IOException ex) {
-            Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ProjectNotOpenException ex) {
-            Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (PackageNotFoundException ex) {
-            Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        dialog.showCentered(frame);
-        dialog.dispose();
+        SwingUtilities.invokeLater(() -> {
+            dialog.showCentered(frame);
+            dialog.dispose();
+        });
     }
 }

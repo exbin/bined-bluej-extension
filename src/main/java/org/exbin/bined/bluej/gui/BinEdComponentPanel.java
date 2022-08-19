@@ -15,27 +15,24 @@
  */
 package org.exbin.bined.bluej.gui;
 
-import bluej.extensions.BlueJ;
-import org.exbin.framework.preferences.PreferencesWrapper;
+import bluej.extensions2.BlueJ;
 import org.exbin.framework.editor.text.EncodingsHandler;
 import org.exbin.framework.bined.preferences.BinaryEditorPreferences;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dialog;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import javax.swing.AbstractAction;
+import javax.swing.ImageIcon;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -45,6 +42,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
+import javax.swing.JViewport;
 import javax.swing.KeyStroke;
 import org.exbin.bined.basic.BasicCodeAreaZone;
 import org.exbin.bined.CodeAreaCaretPosition;
@@ -56,8 +54,6 @@ import org.exbin.bined.bluej.GoToPositionAction;
 import org.exbin.bined.bluej.SearchAction;
 import org.exbin.bined.capability.CharsetCapable;
 import org.exbin.auxiliary.paged_data.delta.DeltaDocument;
-import org.exbin.auxiliary.paged_data.delta.FileDataSource;
-import org.exbin.auxiliary.paged_data.delta.SegmentsRepository;
 import org.exbin.bined.extended.layout.ExtendedCodeAreaLayoutProfile;
 import org.exbin.bined.highlight.swing.extended.ExtendedHighlightNonAsciiCodeAreaPainter;
 import org.exbin.framework.bined.gui.ValuesPanel;
@@ -74,8 +70,6 @@ import org.exbin.framework.utils.WindowUtils;
 import org.exbin.framework.utils.handler.OptionsControlHandler;
 import org.exbin.framework.utils.gui.OptionsControlPanel;
 import org.exbin.auxiliary.paged_data.BinaryData;
-import org.exbin.auxiliary.paged_data.ByteArrayData;
-import org.exbin.auxiliary.paged_data.PagedData;
 import org.exbin.framework.bined.BinaryStatusApi;
 import org.exbin.framework.bined.FileHandlingMode;
 import org.exbin.framework.bined.options.CodeAreaColorOptions;
@@ -91,52 +85,58 @@ import org.exbin.framework.about.gui.AboutPanel;
 import org.exbin.framework.utils.ActionUtils;
 import org.exbin.framework.utils.WindowUtils.DialogWrapper;
 import org.exbin.framework.utils.gui.CloseControlPanel;
-import org.exbin.auxiliary.paged_data.ByteArrayEditableData;
-import org.exbin.auxiliary.paged_data.EditableBinaryData;
+import org.exbin.bined.bluej.BinEdFile;
 import org.exbin.bined.bluej.BlueJPreferencesWrapper;
+import org.exbin.bined.bluej.action.CompareFilesAction;
+import org.exbin.bined.bluej.action.EditSelectionAction;
+import org.exbin.bined.bluej.action.InsertDataAction;
+import org.exbin.bined.operation.undo.BinaryDataUndoHandler;
+import org.exbin.framework.editor.text.service.TextFontService;
+import org.exbin.framework.utils.BareBonesBrowserLaunch;
 
 /**
  * Binary editor main panel.
  *
- * @version 0.2.0 2019/08/08
+ * @version 0.2.1 2022/08/19
  * @author ExBin Project (http://exbin.org)
  */
+@ParametersAreNonnullByDefault
 public final class BinEdComponentPanel extends JPanel {
 
-    public static final String ACTION_CLIPBOARD_CUT = "cut-to-clipboard";
-    public static final String ACTION_CLIPBOARD_COPY = "copy-to-clipboard";
-    public static final String ACTION_CLIPBOARD_PASTE = "paste-from-clipboard";
+    private static final String BINED_TANGO_ICON_THEME_PREFIX = "/org/exbin/framework/bined/resources/icons/tango-icon-theme/16x16/actions/";
+    private static final String FRAMEWORK_TANGO_ICON_THEME_PREFIX = "/org/exbin/framework/action/resources/icons/tango-icon-theme/16x16/actions/";
     private static final FileHandlingMode DEFAULT_FILE_HANDLING_MODE = FileHandlingMode.DELTA;
+    private static final String ONLINE_HELP_URL = "https://bined.exbin.org/bluej-extension/?manual";
 
+    private BinEdComponentFileApi fileApi = null;
     private final BinaryEditorPreferences preferences;
-    private static SegmentsRepository segmentsRepository = null;
     private final ExtCodeArea codeArea;
-    private final CodeAreaUndoHandler undoHandler;
+    private BinaryDataUndoHandler undoHandler;
     private final ExtendedCodeAreaLayoutProfile defaultLayoutProfile;
     private final ExtendedCodeAreaThemeProfile defaultThemeProfile;
     private final CodeAreaColorsProfile defaultColorProfile;
-//    private final InstanceContent content = new InstanceContent();
 
     private BinEdToolbarPanel toolbarPanel;
     private BinaryStatusPanel statusPanel;
     private BinaryStatusApi binaryStatus;
     private TextEncodingStatusApi encodingStatus;
     private CharsetChangeListener charsetChangeListener = null;
+    private ModifiedStateListener modifiedChangeListener = null;
     private GoToPositionAction goToPositionAction;
-    private AbstractAction showHeaderAction;
-    private AbstractAction showRowNumbersAction;
+    private final InsertDataAction insertDataAction;
+    private final EditSelectionAction editSelectionAction;
+    private final CompareFilesAction compareFilesAction;
+    private final AbstractAction showHeaderAction;
+    private final AbstractAction showRowNumbersAction;
+    private final SearchAction searchAction;
     private EncodingsHandler encodingsHandler;
     private ValuesPanel valuesPanel = null;
     private JScrollPane valuesPanelScrollPane = null;
     private boolean valuesPanelVisible = false;
-    private final SearchAction searchAction;
 
-    private boolean opened = false;
-    private boolean modified = false;
     private FileHandlingMode fileHandlingMode = DEFAULT_FILE_HANDLING_MODE;
-    protected String displayName;
+    private final Font defaultFont;
     private long documentOriginalSize;
-    private String fileName;
 
     public BinEdComponentPanel(BlueJ bluej) {
         initComponents();
@@ -145,48 +145,22 @@ public final class BinEdComponentPanel extends JPanel {
 
         codeArea = new ExtCodeArea();
         codeArea.setPainter(new ExtendedHighlightNonAsciiCodeAreaPainter(codeArea));
-        codeArea.setCodeFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        defaultFont = new Font(Font.MONOSPACED, Font.PLAIN, 12);
+        codeArea.setCodeFont(defaultFont);
         codeArea.getCaret().setBlinkRate(300);
         defaultLayoutProfile = codeArea.getLayoutProfile();
         defaultThemeProfile = codeArea.getThemeProfile();
         defaultColorProfile = codeArea.getColorsProfile();
-
         undoHandler = new CodeAreaUndoHandler(codeArea);
-        toolbarPanel = new BinEdToolbarPanel(preferences, codeArea, undoHandler);
+        toolbarPanel = new BinEdToolbarPanel(preferences, codeArea, createOptionsAction(), createOnlineHelpAction(), undoHandler);
         toolbarPanel.setSaveAction(this::saveFileButtonActionPerformed);
         statusPanel = new BinaryStatusPanel();
-        codeAreaPanel.add(toolbarPanel, BorderLayout.NORTH);
-        registerEncodingStatus(statusPanel);
-        encodingsHandler = new EncodingsHandler();
-        encodingsHandler.init();
-        encodingsHandler.setParentComponent(this);
-        encodingsHandler.setTextEncodingStatus(new TextEncodingStatusApi() {
-            @Override
-            public String getEncoding() {
-                return encodingStatus.getEncoding();
-            }
 
-            @Override
-            public void setEncoding(String encodingName) {
-                codeArea.setCharset(Charset.forName(encodingName));
-                encodingStatus.setEncoding(encodingName);
-                preferences.getEncodingPreferences().setSelectedEncoding(encodingName);
-                charsetChangeListener.charsetChanged();
-            }
-        });
-
-        getSegmentsRepository();
-        setNewData();
-        CodeAreaOperationCommandHandler commandHandler = new CodeAreaOperationCommandHandler(codeArea, undoHandler);
-        codeArea.setCommandHandler(commandHandler);
-
-        initialLoadFromPreferences();
-
-        codeAreaPanel.add(codeArea, BorderLayout.CENTER);
-        add(statusPanel, BorderLayout.SOUTH);
-        registerBinaryStatus(statusPanel);
         goToPositionAction = new GoToPositionAction(codeArea);
-        goToPositionAction.setParentComponent(this);
+        goToPositionAction.setParentComponent(this); // TODO
+        insertDataAction = new InsertDataAction(codeArea);
+        editSelectionAction = new EditSelectionAction(codeArea);
+        compareFilesAction = new CompareFilesAction(codeArea);
         showHeaderAction = new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -211,16 +185,41 @@ public final class BinEdComponentPanel extends JPanel {
                 codeArea.setLayoutProfile(layoutProfile);
             }
         };
+        searchAction = new SearchAction(codeArea, codeAreaPanel);
 
-        codeArea.setComponentPopupMenu(new JPopupMenu() {
+        CodeAreaOperationCommandHandler commandHandler = new CodeAreaOperationCommandHandler(codeArea, undoHandler);
+        codeArea.setCommandHandler(commandHandler);
+        
+        init();
+    }
+    
+    private void init() {
+        codeAreaPanel.add(toolbarPanel, BorderLayout.NORTH);
+        registerEncodingStatus(statusPanel);
+        encodingsHandler = new EncodingsHandler();
+        encodingsHandler.init();
+        encodingsHandler.setParentComponent(this);
+        encodingsHandler.setTextEncodingStatus(new TextEncodingStatusApi() {
             @Override
-            public void show(Component invoker, int x, int y) {
-                JPopupMenu popupMenu = createContextMenu(x, y);
-                popupMenu.show(invoker, x, y);
+            public String getEncoding() {
+                return encodingStatus.getEncoding();
+            }
+
+            @Override
+            public void setEncoding(String encodingName) {
+                codeArea.setCharset(Charset.forName(encodingName));
+                encodingStatus.setEncoding(encodingName);
+                preferences.getEncodingPreferences().setSelectedEncoding(encodingName);
+                charsetChangeListener.charsetChanged();
             }
         });
 
-        toolbarPanel.applyFromCodeArea();
+        registerBinaryStatus(statusPanel);
+
+        initialLoadFromPreferences();
+
+        codeAreaPanel.add(codeArea, BorderLayout.CENTER);
+        add(statusPanel, BorderLayout.SOUTH);
 
         undoHandler.addUndoUpdateListener(new BinaryDataUndoUpdateListener() {
             @Override
@@ -228,39 +227,53 @@ public final class BinEdComponentPanel extends JPanel {
                 codeArea.repaint();
                 toolbarPanel.updateUndoState();
                 updateCurrentDocumentSize();
-                updateModified();
+                notifyModified();
             }
 
             @Override
             public void undoCommandAdded(final BinaryDataCommand command) {
                 toolbarPanel.updateUndoState();
                 updateCurrentDocumentSize();
-                updateModified();
+                notifyModified();
             }
         });
         toolbarPanel.updateUndoState();
 
-        searchAction = new SearchAction(codeArea, codeAreaPanel);
+        codeArea.setComponentPopupMenu(new JPopupMenu() {
+            @Override
+            public void show(Component invoker, int x, int y) {
+                int clickedX = x;
+                int clickedY = y;
+                if (invoker instanceof JViewport) {
+                    clickedX += invoker.getParent().getX();
+                    clickedY += invoker.getParent().getY();
+                }
+                removeAll();
+                createContextMenu(this, clickedX, clickedY);
+                super.show(invoker, x, y);
+            }
+        });
+
         codeArea.addDataChangedListener(() -> {
             searchAction.codeAreaDataChanged();
             updateCurrentDocumentSize();
         });
 
         toolbarPanel.applyFromCodeArea();
-
-        getActionMap().put(ACTION_CLIPBOARD_COPY, new AbstractAction() {
+        
+        getActionMap().put(BinEdFile.ACTION_CLIPBOARD_COPY, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 codeArea.copy();
             }
         });
-        getActionMap().put(ACTION_CLIPBOARD_CUT, new AbstractAction() {
+        getActionMap().put(BinEdFile.ACTION_CLIPBOARD_CUT, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 codeArea.cut();
             }
         });
-        getActionMap().put(ACTION_CLIPBOARD_PASTE, new AbstractAction() {
+        getActionMap().put(BinEdFile.ACTION_CLIPBOARD_PASTE, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 codeArea.paste();
@@ -329,13 +342,20 @@ public final class BinEdComponentPanel extends JPanel {
             public void changeMemoryMode(BinaryStatusApi.MemoryMode memoryMode) {
                 FileHandlingMode newHandlingMode = memoryMode == BinaryStatusApi.MemoryMode.DELTA_MODE ? FileHandlingMode.DELTA : FileHandlingMode.MEMORY;
                 if (newHandlingMode != fileHandlingMode) {
-                    // TODO
-                    // fileApi.switchFileHandlingMode(newHandlingMode);
-                    switchFileHandlingMode(newHandlingMode);
+                    fileApi.switchFileHandlingMode(newHandlingMode);
                     preferences.getEditorPreferences().setFileHandlingMode(newHandlingMode);
                 }
             }
         });
+    }
+
+    @Nullable
+    public BinEdComponentFileApi getFileApi() {
+        return fileApi;
+    }
+
+    public void setFileApi(BinEdComponentFileApi fileApi) {
+        this.fileApi = fileApi;
     }
 
     private void switchShowValuesPanel(boolean showValuesPanel) {
@@ -343,47 +363,6 @@ public final class BinEdComponentPanel extends JPanel {
             showValuesPanel();
         } else {
             hideValuesPanel();
-        }
-    }
-
-    private void switchFileHandlingMode(FileHandlingMode newHandlingMode) {
-        if (newHandlingMode != fileHandlingMode) {
-            // Switch memory mode
-            Object dataObject = null;
-            if (dataObject != null) {
-                // If document is connected to file, attempt to release first if modified and then simply reload
-                if (isModified()) {
-                    if (releaseFile()) {
-                        fileHandlingMode = newHandlingMode;
-//                        openDataObject(dataObject);
-                        codeArea.clearSelection();
-                        codeArea.setCaretPosition(0);
-                    }
-                } else {
-                    fileHandlingMode = newHandlingMode;
-//                    openDataObject(dataObject);
-                }
-            } else {
-                // If document unsaved in memory, switch data in code area
-                if (codeArea.getContentData() instanceof DeltaDocument) {
-                    BinaryData oldData = codeArea.getContentData();
-                    PagedData data = new PagedData();
-                    data.insert(0, codeArea.getContentData());
-                    codeArea.setContentData(data);
-                    oldData.dispose();
-                } else {
-                    BinaryData oldData = codeArea.getContentData();
-                    DeltaDocument document = segmentsRepository.createDocument();
-                    document.insert(0, oldData);
-                    codeArea.setContentData(document);
-                    oldData.dispose();
-                }
-                undoHandler.clear();
-                codeArea.notifyDataChanged();
-                updateCurrentMemoryMode();
-                fileHandlingMode = newHandlingMode;
-            }
-            fileHandlingMode = newHandlingMode;
         }
     }
 
@@ -399,47 +378,12 @@ public final class BinEdComponentPanel extends JPanel {
         this.charsetChangeListener = charsetChangeListener;
     }
 
-    public boolean canClose() {
-        if (!modified) {
-            return true;
-        }
-
-        final Component parent = null; //WindowManager.getDefault().getMainWindow();
-        final Object[] options = new Object[]{"Save", "Discard", "Cancel"};
-        final String message = "File " + displayName + " is modified. Save?";
-        final int choice = JOptionPane.showOptionDialog(parent, message, "Question", JOptionPane.YES_NO_CANCEL_OPTION,
-                JOptionPane.QUESTION_MESSAGE, null, options, JOptionPane.YES_OPTION);
-        if (choice == JOptionPane.CANCEL_OPTION) {
-            return false;
-        }
-
-        if (choice == JOptionPane.YES_OPTION) {
-            try {
-                saveFile();
-            } catch (IOException ex) {
-                Logger.getLogger(BinEdComponentPanel.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-
-        return true;
+    public void setModifiedChangeListener(ModifiedStateListener modifiedChangeListener) {
+        this.modifiedChangeListener = modifiedChangeListener;
     }
 
     public boolean isModified() {
-        return undoHandler.getCommandPosition() != undoHandler.getSyncPoint();
-    }
-
-    void setModified(boolean modified) {
-        this.modified = modified;
-        toolbarPanel.updateUndoState();
-        toolbarPanel.updateModified(modified);
-    }
-
-    private void setNewData() {
-        if (fileHandlingMode == FileHandlingMode.DELTA) {
-            codeArea.setContentData(segmentsRepository.createDocument());
-        } else {
-            codeArea.setContentData(new PagedData());
-        }
+        return undoHandler != null && undoHandler.getCommandPosition() != undoHandler.getSyncPoint();
     }
 
     /**
@@ -449,7 +393,7 @@ public final class BinEdComponentPanel extends JPanel {
      */
     public boolean releaseFile() {
 
-        if (fileName == null) {
+        if (fileApi == null) {
             return true;
         }
         while (isModified()) {
@@ -471,66 +415,17 @@ public final class BinEdComponentPanel extends JPanel {
                 return false;
             }
 
-            try {
-                saveFile();
-            } catch (IOException ex) {
-                Logger.getLogger(BinEdComponentPanel.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            saveDocument();
         }
 
         return true;
     }
 
-    public String getFileName() {
-        return fileName;
-    }
+    private void saveDocument() {
+        fileApi.saveDocument();
 
-    public void openFile(String fileName) throws IOException {
-        this.fileName = fileName;
-        openFileInt(new File(fileName));
-    }
-
-    public void openFile(File file) throws IOException {
-        this.fileName = file.getName();
-        openFileInt(file);
-    }
-
-    private void openFileInt(File file) throws IOException {
-        boolean editable = file.canWrite();
-        BinaryData oldData = codeArea.getContentData();
-        if (fileHandlingMode == FileHandlingMode.MEMORY) {
-            EditableBinaryData data = new ByteArrayEditableData();
-            data.loadFromStream(new FileInputStream(file));
-            codeArea.setContentData(data);
-            oldData.dispose();
-        } else {
-            FileDataSource fileSource = segmentsRepository.openFileSource(file, editable ? FileDataSource.EditMode.READ_WRITE : FileDataSource.EditMode.READ_ONLY);
-            DeltaDocument document = segmentsRepository.createDocument(fileSource);
-            codeArea.setContentData(document);
-            oldData.dispose();
-        }
-        codeArea.setEditMode(editable ? EditMode.EXPANDING : EditMode.READ_ONLY);
-        opened = true;
-        documentOriginalSize = codeArea.getDataSize();
-        updateCurrentDocumentSize();
-        updateCurrentMemoryMode();
-    }
-
-    public void saveFile(String fileName) throws IOException {
-        this.fileName = fileName;
-        saveFile();
-    }
-
-    public void saveFile() throws IOException {
-        BinaryData data = codeArea.getContentData();
-        if (fileHandlingMode == FileHandlingMode.MEMORY) {
-            segmentsRepository.saveDocument((DeltaDocument) data);
-        } else {
-            File file = new File(fileName);
-            data.saveToStream(new FileOutputStream(file));
-        }
         undoHandler.setSyncPoint();
-        setModified(false);
+        notifyModified();
         documentOriginalSize = codeArea.getDataSize();
         updateCurrentDocumentSize();
         updateCurrentMemoryMode();
@@ -563,8 +458,12 @@ public final class BinEdComponentPanel extends JPanel {
         }
     }
 
-    private void updateModified() {
-        setModified(undoHandler.getSyncPoint() != undoHandler.getCommandPosition());
+    private void notifyModified() {
+        if (modifiedChangeListener != null) {
+            modifiedChangeListener.modifiedChanged();
+        }
+        
+//        toolbarPanel.updateModified(isModified());
     }
 
     /**
@@ -592,88 +491,65 @@ public final class BinEdComponentPanel extends JPanel {
     }
 
     public void componentClosed() {
-        closeData();
+        fileApi.closeData();
     }
 
-    private void closeData() {
-        BinaryData data = codeArea.getContentData();
-        codeArea.setContentData(new ByteArrayData());
-        if (data instanceof DeltaDocument) {
-            FileDataSource fileSource = ((DeltaDocument) data).getFileSource();
-            data.dispose();
-            segmentsRepository.detachFileSource(fileSource);
-            segmentsRepository.closeFileSource(fileSource);
-        } else {
-            if (data != null) {
-                data.dispose();
-            }
-        }
-    }
-
-    public static synchronized SegmentsRepository getSegmentsRepository() {
-        if (segmentsRepository == null) {
-            segmentsRepository = new SegmentsRepository();
-        }
-
-        return segmentsRepository;
-    }
-
-    @Nonnull
-    private JPopupMenu createContextMenu(int x, int y) {
-        final JPopupMenu result = new JPopupMenu();
-
+    private void createContextMenu(final JPopupMenu menu, int x, int y) {
         BasicCodeAreaZone positionZone = codeArea.getPainter().getPositionZone(x, y);
 
         switch (positionZone) {
             case TOP_LEFT_CORNER:
             case HEADER: {
-                result.add(createShowHeaderMenuItem());
-                result.add(createPositionCodeTypeMenuItem());
+                menu.add(createShowHeaderMenuItem());
+                menu.add(createPositionCodeTypeMenuItem());
                 break;
             }
             case ROW_POSITIONS: {
-                result.add(createShowRowPositionMenuItem());
-                result.add(createPositionCodeTypeMenuItem());
-                result.add(new JSeparator());
-                result.add(createGoToMenuItem());
+                menu.add(createShowRowPositionMenuItem());
+                menu.add(createPositionCodeTypeMenuItem());
+                menu.add(new JSeparator());
+                menu.add(createGoToMenuItem());
 
                 break;
             }
             default: {
                 final JMenuItem cutMenuItem = new JMenuItem("Cut");
+                cutMenuItem.setIcon(new ImageIcon(getClass().getResource(FRAMEWORK_TANGO_ICON_THEME_PREFIX + "edit-cut.png")));
                 cutMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionUtils.getMetaMask()));
                 cutMenuItem.setEnabled(codeArea.hasSelection() && codeArea.isEditable());
                 cutMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.cut();
-                    result.setVisible(false);
+                    menu.setVisible(false);
                 });
-                result.add(cutMenuItem);
+                menu.add(cutMenuItem);
 
                 final JMenuItem copyMenuItem = new JMenuItem("Copy");
+                copyMenuItem.setIcon(new ImageIcon(getClass().getResource(FRAMEWORK_TANGO_ICON_THEME_PREFIX + "edit-copy.png")));
                 copyMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionUtils.getMetaMask()));
                 copyMenuItem.setEnabled(codeArea.hasSelection());
                 copyMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.copy();
-                    result.setVisible(false);
+                    menu.setVisible(false);
                 });
-                result.add(copyMenuItem);
+                menu.add(copyMenuItem);
 
                 final JMenuItem copyAsCodeMenuItem = new JMenuItem("Copy as Code");
                 copyAsCodeMenuItem.setEnabled(codeArea.hasSelection());
                 copyAsCodeMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.copyAsCode();
-                    result.setVisible(false);
+                    menu.setVisible(false);
                 });
-                result.add(copyAsCodeMenuItem);
+                menu.add(copyAsCodeMenuItem);
 
                 final JMenuItem pasteMenuItem = new JMenuItem("Paste");
+                pasteMenuItem.setIcon(new ImageIcon(getClass().getResource(FRAMEWORK_TANGO_ICON_THEME_PREFIX + "edit-paste.png")));
                 pasteMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionUtils.getMetaMask()));
                 pasteMenuItem.setEnabled(codeArea.canPaste() && codeArea.isEditable());
                 pasteMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.paste();
-                    result.setVisible(false);
+                    menu.setVisible(false);
                 });
-                result.add(pasteMenuItem);
+                menu.add(pasteMenuItem);
 
                 final JMenuItem pasteFromCodeMenuItem = new JMenuItem("Paste from Code");
                 pasteFromCodeMenuItem.setEnabled(codeArea.canPaste() && codeArea.isEditable());
@@ -683,52 +559,62 @@ public final class BinEdComponentPanel extends JPanel {
                     } catch (IllegalArgumentException ex) {
                         JOptionPane.showMessageDialog(codeArea, ex.getMessage(), "Unable to Paste Code", JOptionPane.ERROR_MESSAGE);
                     }
-                    result.setVisible(false);
+                    menu.setVisible(false);
                 });
-                result.add(pasteFromCodeMenuItem);
+                menu.add(pasteFromCodeMenuItem);
 
                 final JMenuItem deleteMenuItem = new JMenuItem("Delete");
+                deleteMenuItem.setIcon(new ImageIcon(getClass().getResource(FRAMEWORK_TANGO_ICON_THEME_PREFIX + "edit-delete.png")));
                 deleteMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
                 deleteMenuItem.setEnabled(codeArea.hasSelection() && codeArea.isEditable());
                 deleteMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.delete();
-                    result.setVisible(false);
+                    menu.setVisible(false);
                 });
-                result.add(deleteMenuItem);
-                result.addSeparator();
+                menu.add(deleteMenuItem);
+                menu.addSeparator();
 
                 final JMenuItem selectAllMenuItem = new JMenuItem("Select All");
+                selectAllMenuItem.setIcon(new ImageIcon(getClass().getResource(FRAMEWORK_TANGO_ICON_THEME_PREFIX + "edit-select-all.png")));
                 selectAllMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionUtils.getMetaMask()));
                 selectAllMenuItem.addActionListener((ActionEvent e) -> {
                     codeArea.selectAll();
-                    result.setVisible(false);
+                    menu.setVisible(false);
                 });
-                result.add(selectAllMenuItem);
-                result.addSeparator();
+                menu.add(selectAllMenuItem);
+
+                JMenuItem editSelectionMenuItem = createEditSelectionMenuItem();
+                menu.add(editSelectionMenuItem);
+                menu.addSeparator();
+
+                JMenuItem insertDataMenuItem = createInsertDataMenuItem();
+                menu.add(insertDataMenuItem);
 
                 JMenuItem goToMenuItem = createGoToMenuItem();
-                result.add(goToMenuItem);
+                menu.add(goToMenuItem);
 
                 final JMenuItem findMenuItem = new JMenuItem("Find...");
+                findMenuItem.setIcon(new ImageIcon(getClass().getResource(BINED_TANGO_ICON_THEME_PREFIX + "edit-find.png")));
                 findMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ActionUtils.getMetaMask()));
                 findMenuItem.addActionListener((ActionEvent e) -> {
                     searchAction.actionPerformed(e);
                     searchAction.switchReplaceMode(BinarySearchPanel.SearchOperation.FIND);
                 });
-                result.add(findMenuItem);
+                menu.add(findMenuItem);
 
                 final JMenuItem replaceMenuItem = new JMenuItem("Replace...");
+                replaceMenuItem.setIcon(new ImageIcon(getClass().getResource(BINED_TANGO_ICON_THEME_PREFIX + "edit-find-replace.png")));
                 replaceMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, ActionUtils.getMetaMask()));
                 replaceMenuItem.setEnabled(codeArea.isEditable());
                 replaceMenuItem.addActionListener((ActionEvent e) -> {
                     searchAction.actionPerformed(e);
                     searchAction.switchReplaceMode(BinarySearchPanel.SearchOperation.REPLACE);
                 });
-                result.add(replaceMenuItem);
+                menu.add(replaceMenuItem);
             }
         }
 
-        result.addSeparator();
+        menu.addSeparator();
 
         switch (positionZone) {
             case TOP_LEFT_CORNER:
@@ -738,45 +624,19 @@ public final class BinEdComponentPanel extends JPanel {
             }
             default: {
                 JMenu showMenu = new JMenu("Show");
-                JMenuItem showHeader = createShowHeaderMenuItem();
-                showMenu.add(showHeader);
-                JMenuItem showRowPosition = createShowRowPositionMenuItem();
-                showMenu.add(showRowPosition);
-                result.add(showMenu);
+                showMenu.add(createShowHeaderMenuItem());
+                showMenu.add(createShowRowPositionMenuItem());
+                menu.add(showMenu);
             }
         }
 
-        final JMenuItem optionsMenuItem = new JMenuItem("Options...");
-        optionsMenuItem.addActionListener((ActionEvent e) -> {
-            final BinEdOptionsPanelBorder optionsPanelWrapper = new BinEdOptionsPanelBorder();
-            BinEdOptionsPanel optionsPanel = optionsPanelWrapper.getOptionsPanel();
-            optionsPanel.setPreferences(preferences);
-            optionsPanel.loadFromPreferences();
-            updateApplyOptions(optionsPanel);
-            OptionsControlPanel optionsControlPanel = new OptionsControlPanel();
-            JPanel dialogPanel = WindowUtils.createDialogPanel(optionsPanelWrapper, optionsControlPanel);
-            DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, WindowUtils.getWindow(this), "Options", Dialog.ModalityType.APPLICATION_MODAL);
-            optionsControlPanel.setHandler((OptionsControlHandler.ControlActionType actionType) -> {
-                if (actionType != OptionsControlHandler.ControlActionType.CANCEL) {
-                    try {
-                        optionsPanel.applyToOptions();
-                        if (actionType == OptionsControlHandler.ControlActionType.SAVE) {
-                            optionsPanel.saveToPreferences();
-                        }
-                        applyOptions(optionsPanel);
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(dialogPanel, ex.getMessage());
-                    }
-                    codeArea.repaint();
-                }
+        JMenuItem compareFilesMenuItem = createCompareFilesMenuItem();
+        menu.add(compareFilesMenuItem);
 
-                dialog.close();
-            });
-            dialog.getWindow().setSize(650, 460);
-            dialog.showCentered(this);
-            dialog.dispose();
-        });
-        result.add(optionsMenuItem);
+        final JMenuItem optionsMenuItem = new JMenuItem("Options...");
+        optionsMenuItem.setIcon(new ImageIcon(getClass().getResource("/org/exbin/framework/options/gui/resources/icons/Preferences16.gif")));
+        optionsMenuItem.addActionListener(createOptionsAction());
+        menu.add(optionsMenuItem);
 
         switch (positionZone) {
             case TOP_LEFT_CORNER:
@@ -785,7 +645,13 @@ public final class BinEdComponentPanel extends JPanel {
                 break;
             }
             default: {
-                result.addSeparator();
+                menu.addSeparator();
+
+                final JMenuItem onlineHelpMenuItem = new JMenuItem("Online Help...");
+                onlineHelpMenuItem.setIcon(new ImageIcon(getClass().getResource("/org/exbin/framework/bined/resources/icons/open_icon_library/icons/png/16x16/actions/help.png")));
+                onlineHelpMenuItem.addActionListener(createOnlineHelpAction());
+                menu.add(onlineHelpMenuItem);
+
                 final JMenuItem aboutMenuItem = new JMenuItem("About...");
                 aboutMenuItem.addActionListener((ActionEvent e) -> {
                     AboutPanel aboutPanel = new AboutPanel();
@@ -799,11 +665,70 @@ public final class BinEdComponentPanel extends JPanel {
                     //            dialog.setSize(650, 460);
                     dialog.showCentered(WindowUtils.getWindow(this));
                 });
-                result.add(aboutMenuItem);
+                menu.add(aboutMenuItem);
             }
         }
+    }
 
-        return result;
+    @Nonnull
+    private AbstractAction createOptionsAction() {
+        return new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                final BinEdOptionsPanelBorder optionsPanelWrapper = new BinEdOptionsPanelBorder();
+                optionsPanelWrapper.setPreferredSize(new Dimension(700, 460));
+                BinEdOptionsPanel optionsPanel = optionsPanelWrapper.getOptionsPanel();
+                optionsPanel.setPreferences(preferences);
+                optionsPanel.setTextFontService(new TextFontService() {
+                    @Nonnull
+                    @Override
+                    public Font getCurrentFont() {
+                        return codeArea.getCodeFont();
+                    }
+
+                    @Nonnull
+                    @Override
+                    public Font getDefaultFont() {
+                        return defaultFont;
+                    }
+
+                    @Override
+                    public void setCurrentFont(Font font) {
+                        codeArea.setCodeFont(font);
+                    }
+                });
+                optionsPanel.loadFromPreferences();
+                updateApplyOptions(optionsPanel);
+                OptionsControlPanel optionsControlPanel = new OptionsControlPanel();
+                JPanel dialogPanel = WindowUtils.createDialogPanel(optionsPanelWrapper, optionsControlPanel);
+                WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, (Component) e.getSource(), "Options", Dialog.ModalityType.APPLICATION_MODAL);
+                optionsControlPanel.setHandler((OptionsControlHandler.ControlActionType actionType) -> {
+                    if (actionType != OptionsControlHandler.ControlActionType.CANCEL) {
+                        optionsPanel.applyToOptions();
+                        if (actionType == OptionsControlHandler.ControlActionType.SAVE) {
+                            optionsPanel.saveToPreferences();
+                        }
+                        applyOptions(optionsPanel);
+                        fileApi.switchFileHandlingMode(optionsPanel.getEditorOptions().getFileHandlingMode());
+                        codeArea.repaint();
+                    }
+
+                    dialog.close();
+                });
+                dialog.showCentered((Component) e.getSource());
+                dialog.dispose();
+            }
+        };
+    }
+
+    @Nonnull
+    private AbstractAction createOnlineHelpAction() {
+        return new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                BareBonesBrowserLaunch.openURL(ONLINE_HELP_URL);
+            }
+        };
     }
 
     @Nonnull
@@ -812,6 +737,28 @@ public final class BinEdComponentPanel extends JPanel {
         goToMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ActionUtils.getMetaMask()));
         goToMenuItem.addActionListener(goToPositionAction);
         return goToMenuItem;
+    }
+
+    @Nonnull
+    private JMenuItem createEditSelectionMenuItem() {
+        final JMenuItem editSelectionMenuItem = new JMenuItem("Edit Selection...");
+        editSelectionMenuItem.addActionListener(editSelectionAction);
+        return editSelectionMenuItem;
+    }
+
+    @Nonnull
+    private JMenuItem createInsertDataMenuItem() {
+        final JMenuItem insertDataMenuItem = new JMenuItem("Insert Data...");
+        insertDataMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_I, ActionUtils.getMetaMask()));
+        insertDataMenuItem.addActionListener(insertDataAction);
+        return insertDataMenuItem;
+    }
+
+    @Nonnull
+    private JMenuItem createCompareFilesMenuItem() {
+        final JMenuItem compareFilesMenuItem = new JMenuItem("Compare Files...");
+        compareFilesMenuItem.addActionListener(compareFilesAction);
+        return compareFilesMenuItem;
     }
 
     @Nonnull
@@ -891,8 +838,9 @@ public final class BinEdComponentPanel extends JPanel {
 
         EditorOptions editorOptions = applyOptions.getEditorOptions();
         switchShowValuesPanel(editorOptions.isShowValuesPanel());
-        ((CodeAreaOperationCommandHandler) codeArea.getCommandHandler()).setEnterKeyHandlingMode(editorOptions.getEnterKeyHandlingMode());
-        switchFileHandlingMode(editorOptions.getFileHandlingMode());
+        if (codeArea.getCommandHandler() instanceof CodeAreaOperationCommandHandler) {
+            ((CodeAreaOperationCommandHandler) codeArea.getCommandHandler()).setEnterKeyHandlingMode(editorOptions.getEnterKeyHandlingMode());
+        }
 
         StatusOptions statusOptions = applyOptions.getStatusOptions();
         statusPanel.setStatusOptions(statusOptions);
@@ -950,55 +898,60 @@ public final class BinEdComponentPanel extends JPanel {
         }
     }
 
+    @Nonnull
     public ExtCodeArea getCodeArea() {
         return codeArea;
     }
 
     private void saveFileButtonActionPerformed(java.awt.event.ActionEvent evt) {
-        try {
-            saveFile();
-        } catch (IOException ex) {
-            Logger.getLogger(BinEdComponentPanel.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        fileApi.saveDocument();
     }
 
     private void initialLoadFromPreferences() {
         applyOptions(new BinEdApplyOptions() {
+            @Nonnull
             @Override
             public CodeAreaOptions getCodeAreaOptions() {
                 return preferences.getCodeAreaPreferences();
             }
 
+            @Nonnull
             @Override
             public TextEncodingOptions getEncodingOptions() {
                 return preferences.getEncodingPreferences();
             }
 
+            @Nonnull
             @Override
             public EditorOptions getEditorOptions() {
                 return preferences.getEditorPreferences();
             }
 
+            @Nonnull
             @Override
             public TextFontOptions getFontOptions() {
                 return preferences.getFontPreferences();
             }
 
+            @Nonnull
             @Override
             public StatusOptions getStatusOptions() {
                 return preferences.getStatusPreferences();
             }
 
+            @Nonnull
             @Override
             public CodeAreaLayoutOptions getLayoutOptions() {
                 return preferences.getLayoutPreferences();
             }
 
+            @Nonnull
             @Override
             public CodeAreaColorOptions getColorOptions() {
                 return preferences.getColorPreferences();
             }
 
+            @Nonnull
             @Override
             public CodeAreaThemeOptions getThemeOptions() {
                 return preferences.getThemePreferences();
@@ -1010,10 +963,66 @@ public final class BinEdComponentPanel extends JPanel {
         toolbarPanel.loadFromPreferences();
 
         fileHandlingMode = preferences.getEditorPreferences().getFileHandlingMode();
+        updateCurrentMemoryMode();
+    }
+
+    public BinaryDataUndoHandler getUndoHandler() {
+        return undoHandler;
+    }
+
+    public void setUndoHandler(BinaryDataUndoHandler undoHandler) {
+        this.undoHandler = undoHandler;
+        CodeAreaOperationCommandHandler commandHandler = new CodeAreaOperationCommandHandler(codeArea, undoHandler);
+        codeArea.setCommandHandler(commandHandler);
+        if (valuesPanel != null) {
+            valuesPanel.setCodeArea(codeArea, undoHandler);
+        }
+        insertDataAction.setUndoHandler(undoHandler);
+        // TODO set ENTER KEY mode in apply options
+
+        undoHandler.addUndoUpdateListener(new BinaryDataUndoUpdateListener() {
+            @Override
+            public void undoCommandPositionChanged() {
+                codeArea.repaint();
+                updateCurrentDocumentSize();
+                notifyModified();
+            }
+
+            @Override
+            public void undoCommandAdded(@Nonnull final BinaryDataCommand command) {
+                updateCurrentDocumentSize();
+                notifyModified();
+            }
+        });
+    }
+
+    @Nullable
+    public BinaryData getContentData() {
+        return codeArea.getContentData();
+    }
+
+    public void setContentData(@Nullable BinaryData data) {
+        codeArea.setContentData(data);
+
+        documentOriginalSize = codeArea.getDataSize();
+        updateCurrentDocumentSize();
+        updateCurrentMemoryMode();
+
+        // Autodetect encoding using IDE mechanism
+//        final Charset charset = Charset.forName(FileEncodingQuery.getEncoding(dataObject.getPrimaryFile()).name());
+//        if (charsetChangeListener != null) {
+//            charsetChangeListener.charsetChanged();
+//        }
+//        codeArea.setCharset(charset);
     }
 
     public static interface CharsetChangeListener {
 
-        public void charsetChanged();
+        void charsetChanged();
+    }
+
+    public interface ModifiedStateListener {
+
+        void modifiedChanged();
     }
 }

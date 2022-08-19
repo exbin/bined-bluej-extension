@@ -13,34 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.exbin.bined.bluej;
+package org.exbin.bined.bluej.gui;
 
-import bluej.extensions2.BClass;
-import bluej.extensions2.BObject;
-import bluej.extensions2.BPackage;
-import bluej.extensions2.BlueJ;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import org.exbin.framework.bined.FileHandlingMode;
 
 /**
- * Interface for for menu handling.
+ * Binary editor component file API.
  *
- * @version 0.2.0 2019/05/12
  * @author ExBin Project (http://exbin.org)
+ * @version 0.2.2 2020/01/24
  */
 @ParametersAreNonnullByDefault
-public interface BlueJMenuHandler {
+public interface BinEdComponentFileApi {
 
-    @Nonnull
-    BlueJ getBlueJ();
+    boolean isSaveSupported();
 
-    @Nullable
-    BPackage getCurPackage();
+    void saveDocument();
 
-    @Nullable
-    BClass getCurClass();
+    void switchFileHandlingMode(FileHandlingMode newHandlingMode);
 
-    @Nullable
-    BObject getCurObject();
+    void closeData();
 }

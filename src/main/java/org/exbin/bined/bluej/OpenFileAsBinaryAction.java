@@ -15,7 +15,8 @@
  */
 package org.exbin.bined.bluej;
 
-import bluej.extensions.BlueJ;
+import bluej.extensions2.BPackage;
+import bluej.extensions2.BlueJ;
 import java.awt.Dialog;
 import java.awt.Frame;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -49,7 +50,8 @@ public class OpenFileAsBinaryAction extends AbstractAction {
     @Override
     public void actionPerformed(ActionEvent anEvent) {
         BlueJ bluej = menuHandler.getBlueJ();
-        Frame frame = bluej.getCurrentFrame();
+        BPackage currentPackage = bluej.getCurrentPackage();
+        Frame frame = new JFrame();
 
         JFileChooser fileChooser = new JFileChooser();
         if (previousPath != null) {
@@ -59,7 +61,16 @@ public class OpenFileAsBinaryAction extends AbstractAction {
         if (result == JFileChooser.APPROVE_OPTION) {
             File openedFile = fileChooser.getSelectedFile();
             previousPath = fileChooser.getCurrentDirectory();
-            BinEdComponentPanel editorPanel = new BinEdComponentPanel(bluej);
+
+            BinEdFile file = null;
+            try {
+                file = new BinEdFile(bluej);
+                file.openDocument(openedFile);
+            } catch (IOException ex) {
+                Logger.getLogger(OpenFileAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            BinEdComponentPanel editorPanel = file != null ? file.getComponentPanel() : new BinEdComponentPanel(bluej);
             CloseControlPanel closeControlPanel = new CloseControlPanel();
             JPanel dialogPanel = WindowUtils.createDialogPanel(editorPanel, closeControlPanel);
             WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, frame, "Binary Editor", Dialog.ModalityType.APPLICATION_MODAL);
@@ -81,13 +92,10 @@ public class OpenFileAsBinaryAction extends AbstractAction {
             });
             //            dialog.setSize(650, 460);
 
-            try {
-                editorPanel.openFile(openedFile);
-            } catch (IOException ex) {
-                Logger.getLogger(OpenFileAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            dialog.showCentered(frame);
-            dialog.dispose();
+            SwingUtilities.invokeLater(() -> {
+                dialog.showCentered(frame);
+                dialog.dispose();
+            });
         }
     }
 }

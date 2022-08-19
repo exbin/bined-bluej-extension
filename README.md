@@ -5,6 +5,8 @@ Hexadecimal viewer/editor extension for BlueJ. See https://bluej.org
 
 Homepage: https://bined.exbin.org/bluej-extension/  
 
+Requires BlueJ version 5.0 or higher.
+
 Screenshot
 ----------
 
@@ -24,7 +26,7 @@ Features
 Compiling
 ---------
 
-Java Development Kit (JDK) version 10 or later is required to build this project.
+Java Development Kit (JDK) version 11 or later is required to build this project.
 
 License
 -------

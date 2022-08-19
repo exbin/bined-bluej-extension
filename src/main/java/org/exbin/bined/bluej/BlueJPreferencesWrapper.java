@@ -15,7 +15,7 @@
  */
 package org.exbin.bined.bluej;
 
-import bluej.extensions.BlueJ;
+import bluej.extensions2.BlueJ;
 import java.util.Base64;
 import java.util.Optional;
 import javax.annotation.Nonnull;

@@ -16,7 +16,7 @@
 
   <Layout class="org.netbeans.modules.form.compat2.layouts.DesignBorderLayout"/>
   <SubComponents>
-    <Component class="org.exbin.bined.netbeans.panel.BinEdOptionsPanel" name="optionsPanel">
+    <Component class="org.exbin.bined.bluej.panel.BinEdOptionsPanel" name="optionsPanel">
       <Properties>
         <Property name="border" type="javax.swing.border.Border" editor="org.netbeans.modules.form.editors2.BorderEditor">
           <Border info="org.netbeans.modules.form.compat2.border.EmptyBorderInfo">

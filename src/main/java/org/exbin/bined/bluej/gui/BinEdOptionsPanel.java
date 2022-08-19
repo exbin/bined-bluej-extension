@@ -36,11 +36,11 @@ import org.exbin.bined.swing.extended.layout.DefaultExtendedCodeAreaLayoutProfil
 import org.exbin.bined.swing.extended.theme.ExtendedCodeAreaThemeProfile;
 import org.exbin.framework.bined.options.CodeAreaColorOptions;
 import org.exbin.framework.bined.options.CodeAreaLayoutOptions;
+import org.exbin.framework.bined.preferences.BinaryEditorPreferences;
 import org.exbin.framework.bined.options.CodeAreaOptions;
 import org.exbin.framework.bined.options.CodeAreaThemeOptions;
 import org.exbin.framework.bined.options.EditorOptions;
 import org.exbin.framework.bined.options.StatusOptions;
-import org.exbin.framework.bined.preferences.BinaryEditorPreferences;
 import org.exbin.framework.bined.options.impl.CodeAreaColorOptionsImpl;
 import org.exbin.framework.bined.options.impl.CodeAreaLayoutOptionsImpl;
 import org.exbin.framework.bined.options.impl.CodeAreaOptionsImpl;
@@ -50,14 +50,17 @@ import org.exbin.framework.bined.options.impl.StatusOptionsImpl;
 import org.exbin.framework.bined.options.gui.CodeAreaOptionsPanel;
 import org.exbin.framework.bined.options.gui.ColorProfilePanel;
 import org.exbin.framework.bined.options.gui.ColorProfilesPanel;
+import org.exbin.framework.bined.options.gui.ColorTemplatePanel;
 import org.exbin.framework.bined.options.gui.EditorOptionsPanel;
 import org.exbin.framework.bined.options.gui.LayoutProfilePanel;
 import org.exbin.framework.bined.options.gui.LayoutProfilesPanel;
+import org.exbin.framework.bined.options.gui.LayoutTemplatePanel;
 import org.exbin.framework.bined.options.gui.NamedProfilePanel;
 import org.exbin.framework.bined.options.gui.ProfileSelectionPanel;
 import org.exbin.framework.bined.options.gui.StatusOptionsPanel;
 import org.exbin.framework.bined.options.gui.ThemeProfilePanel;
 import org.exbin.framework.bined.options.gui.ThemeProfilesPanel;
+import org.exbin.framework.bined.options.gui.ThemeTemplatePanel;
 import org.exbin.framework.editor.text.options.TextFontOptions;
 import org.exbin.framework.editor.text.options.impl.TextEncodingOptionsImpl;
 import org.exbin.framework.editor.text.options.impl.TextFontOptionsImpl;
@@ -65,6 +68,7 @@ import org.exbin.framework.editor.text.options.gui.TextEncodingOptionsPanel;
 import org.exbin.framework.editor.text.options.gui.TextFontOptionsPanel;
 import org.exbin.framework.editor.text.gui.AddEncodingPanel;
 import org.exbin.framework.editor.text.gui.TextFontPanel;
+import org.exbin.framework.editor.text.service.TextFontService;
 import org.exbin.framework.utils.LanguageUtils;
 import org.exbin.framework.utils.WindowUtils;
 import org.exbin.framework.utils.WindowUtils.DialogWrapper;
@@ -74,13 +78,14 @@ import org.exbin.framework.utils.gui.DefaultControlPanel;
 /**
  * Binary editor options panel.
  *
- * @version 0.2.1 2019/10/26
+ * @version 0.2.1 2019/08/21
  * @author ExBin Project (http://exbin.org)
  */
 @ParametersAreNonnullByDefault
 public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyOptions {
 
     private BinaryEditorPreferences preferences;
+//    private final BinEdOptionsPanelController controller;
     private final java.util.ResourceBundle resourceBundle = LanguageUtils.getResourceBundleByClass(BinEdOptionsPanel.class);
 
     private DefaultListModel<CategoryItem> categoryModel = new DefaultListModel<>();
@@ -146,7 +151,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             addEncodingPanel.setUsedEncodings(usedEncodings);
             DefaultControlPanel encodingsControlPanel = new DefaultControlPanel(addEncodingPanel.getResourceBundle());
             JPanel dialogPanel = WindowUtils.createDialogPanel(addEncodingPanel, encodingsControlPanel);
-            final DialogWrapper addEncodingDialog = WindowUtils.createDialog(dialogPanel, WindowUtils.getWindow(this), "Add Encodings", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+            final DialogWrapper addEncodingDialog = WindowUtils.createDialog(dialogPanel, this, "Add Encodings", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
             encodingsControlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType == DefaultControlHandler.ControlActionType.OK) {
                     result.addAll(addEncodingPanel.getEncodings());
@@ -154,7 +159,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
 
                 addEncodingDialog.close();
             });
-            addEncodingDialog.showCentered(WindowUtils.getWindow(this));
+            addEncodingDialog.show();
             return result;
         });
 
@@ -199,7 +204,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -228,7 +233,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -253,11 +258,12 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
 
             LayoutProfileResult result = new LayoutProfileResult();
             final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parentComponent, "Copy Layout Profile", Dialog.ModalityType.APPLICATION_MODAL);
+            namedProfilePanel.setProfileName(profileRecord.getProfileName() + " #copy");
             layoutProfilePanel.setLayoutProfile(profileRecord.getLayoutProfile());
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -271,6 +277,43 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             });
             dialog.showCentered(parentComponent);
 
+            return result.profile;
+        });
+        layoutProfilesPanel.setTemplateProfileOperation((JComponent parentComponent) -> {
+            LayoutTemplatePanel layoutTemplatePanel = new LayoutTemplatePanel();
+            NamedProfilePanel namedProfilePanel = new NamedProfilePanel(layoutTemplatePanel);
+            namedProfilePanel.setProfileName("");
+            layoutTemplatePanel.addListSelectionListener((e) -> {
+                LayoutTemplatePanel.LayoutProfile selectedTemplate = layoutTemplatePanel.getSelectedTemplate();
+                namedProfilePanel.setProfileName(selectedTemplate != null ? selectedTemplate.getProfileName() : "");
+            });
+            DefaultControlPanel controlPanel = new DefaultControlPanel();
+            JPanel dialogPanel = WindowUtils.createDialogPanel(namedProfilePanel, controlPanel);
+
+            LayoutProfileResult result = new LayoutProfileResult();
+            final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parentComponent, "Add Layout Template", Dialog.ModalityType.APPLICATION_MODAL);
+            controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
+                if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
+                    if (!isValidProfileName(namedProfilePanel.getProfileName())) {
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Template Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    LayoutTemplatePanel.LayoutProfile selectedTemplate = layoutTemplatePanel.getSelectedTemplate();
+                    if (selectedTemplate == null) {
+                        JOptionPane.showMessageDialog(parentComponent, "No template selected", "Profile Template Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    result.profile = new LayoutProfilesPanel.LayoutProfile(
+                            namedProfilePanel.getProfileName(), selectedTemplate.getLayoutProfile()
+                    );
+                }
+
+                dialog.close();
+                dialog.dispose();
+            });
+            dialog.showCentered(parentComponent);
             return result.profile;
         });
 
@@ -287,7 +330,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -316,7 +359,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -341,11 +384,12 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
 
             ThemeProfileResult result = new ThemeProfileResult();
             final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parentComponent, "Copy Theme Profile", Dialog.ModalityType.APPLICATION_MODAL);
+            namedProfilePanel.setProfileName(profileRecord.getProfileName() + " #copy");
             themeProfilePanel.setThemeProfile(profileRecord.getThemeProfile());
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -359,6 +403,44 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             });
             dialog.showCentered(parentComponent);
 
+            return result.profile;
+        });
+        themeProfilesPanel.setTemplateProfileOperation((JComponent parentComponent) -> {
+            ThemeTemplatePanel themeTemplatePanel = new ThemeTemplatePanel();
+            NamedProfilePanel namedProfilePanel = new NamedProfilePanel(themeTemplatePanel);
+            namedProfilePanel.setProfileName("");
+            themeTemplatePanel.addListSelectionListener((e) -> {
+                ThemeTemplatePanel.ThemeProfile selectedTemplate = themeTemplatePanel.getSelectedTemplate();
+                namedProfilePanel.setProfileName(selectedTemplate != null ? selectedTemplate.getProfileName() : "");
+            });
+            DefaultControlPanel controlPanel = new DefaultControlPanel();
+            JPanel dialogPanel = WindowUtils.createDialogPanel(namedProfilePanel, controlPanel);
+
+            ThemeProfileResult result = new ThemeProfileResult();
+            final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parentComponent, "Add Theme Template", Dialog.ModalityType.APPLICATION_MODAL);
+            WindowUtils.addHeaderPanel(dialog.getWindow(), themeTemplatePanel.getClass(), themeTemplatePanel.getResourceBundle());
+            controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
+                if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
+                    if (!isValidProfileName(namedProfilePanel.getProfileName())) {
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Template Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    ThemeTemplatePanel.ThemeProfile selectedTemplate = themeTemplatePanel.getSelectedTemplate();
+                    if (selectedTemplate == null) {
+                        JOptionPane.showMessageDialog(parentComponent, "No template selected", "Profile Template Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    result.profile = new ThemeProfilesPanel.ThemeProfile(
+                            namedProfilePanel.getProfileName(), selectedTemplate.getThemeProfile()
+                    );
+                }
+
+                dialog.close();
+                dialog.dispose();
+            });
+            dialog.showCentered(parentComponent);
             return result.profile;
         });
 
@@ -375,7 +457,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -403,7 +485,7 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -428,11 +510,12 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
 
             ColorProfileResult result = new ColorProfileResult();
             final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parentComponent, "Copy Colors Profile", Dialog.ModalityType.APPLICATION_MODAL);
+            namedProfilePanel.setProfileName(profileRecord.getProfileName() + " #copy");
             colorProfilePanel.setColorProfile(profileRecord.getColorProfile());
             controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
                 if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
                     if (!isValidProfileName(namedProfilePanel.getProfileName())) {
-                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Editation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Edit Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -446,6 +529,44 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
             });
             dialog.showCentered(parentComponent);
 
+            return result.profile;
+        });
+        colorProfilesPanel.setTemplateProfileOperation((JComponent parentComponent) -> {
+            ColorTemplatePanel colorTemplatePanel = new ColorTemplatePanel();
+            NamedProfilePanel namedProfilePanel = new NamedProfilePanel(colorTemplatePanel);
+            namedProfilePanel.setProfileName("");
+            colorTemplatePanel.addListSelectionListener((e) -> {
+                ColorTemplatePanel.ColorProfile selectedTemplate = colorTemplatePanel.getSelectedTemplate();
+                namedProfilePanel.setProfileName(selectedTemplate != null ? selectedTemplate.getProfileName() : "");
+            });
+            DefaultControlPanel controlPanel = new DefaultControlPanel();
+            JPanel dialogPanel = WindowUtils.createDialogPanel(namedProfilePanel, controlPanel);
+
+            ColorProfileResult result = new ColorProfileResult();
+            final DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, parentComponent, "Add Colors Template", Dialog.ModalityType.APPLICATION_MODAL);
+            WindowUtils.addHeaderPanel(dialog.getWindow(), colorTemplatePanel.getClass(), colorTemplatePanel.getResourceBundle());
+            controlPanel.setHandler((DefaultControlHandler.ControlActionType actionType) -> {
+                if (actionType != DefaultControlHandler.ControlActionType.CANCEL) {
+                    if (!isValidProfileName(namedProfilePanel.getProfileName())) {
+                        JOptionPane.showMessageDialog(parentComponent, "Invalid profile name", "Profile Template Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    ColorTemplatePanel.ColorProfile selectedTemplate = colorTemplatePanel.getSelectedTemplate();
+                    if (selectedTemplate == null) {
+                        JOptionPane.showMessageDialog(parentComponent, "No template selected", "Profile Template Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    result.profile = new ColorProfilesPanel.ColorProfile(
+                            namedProfilePanel.getProfileName(), selectedTemplate.getColorProfile()
+                    );
+                }
+
+                dialog.close();
+                dialog.dispose();
+            });
+            dialog.showCentered(parentComponent);
             return result.profile;
         });
     }
@@ -551,6 +672,10 @@ public class BinEdOptionsPanel extends javax.swing.JPanel implements BinEdApplyO
     boolean valid() {
         // TODO check whether form is consistent and complete
         return true;
+    }
+
+    public void setTextFontService(TextFontService textFontService) {
+        fontOptionsPanel.setTextFontService(textFontService);
     }
 
     @Nonnull

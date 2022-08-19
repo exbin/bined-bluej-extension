@@ -20,7 +20,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 /**
  * Binary editor options panel with border.
  *
- * @version 0.2.0 2019/03/16
+ * @version 0.2.0 2019/08/06
  * @author ExBin Project (http://exbin.org)
  */
 @ParametersAreNonnullByDefault
