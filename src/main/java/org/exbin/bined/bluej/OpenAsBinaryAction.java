@@ -77,31 +77,31 @@ public class OpenAsBinaryAction extends AbstractAction {
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(OpenAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
         }
-
-        Frame frame = new JFrame();
         BinEdComponentPanel editorPanel = file != null ? file.getComponentPanel() : new BinEdComponentPanel(bluej);
-        CloseControlPanel closeControlPanel = new CloseControlPanel();
-        JPanel dialogPanel = WindowUtils.createDialogPanel(editorPanel, closeControlPanel);
-        WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, frame, "Binary Editor", Dialog.ModalityType.APPLICATION_MODAL);
-        closeControlPanel.setHandler(() -> {
-            dialog.close();
-        });
-        ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        ((JDialog) dialog.getWindow()).addWindowListener(new WindowAdapter() {
-            boolean termination = false;
-
-            @Override
-            public void windowClosing(WindowEvent e) {
-                if (!termination && editorPanel.releaseFile()) {
-                    termination = true;
-                    ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
-                    dialog.close();
-                }
-            }
-        });
-        //            dialog.setSize(650, 460);
 
         SwingUtilities.invokeLater(() -> {
+            Frame frame = new JFrame();
+            CloseControlPanel closeControlPanel = new CloseControlPanel();
+            JPanel dialogPanel = WindowUtils.createDialogPanel(editorPanel, closeControlPanel);
+            WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, frame, "Binary Editor", Dialog.ModalityType.APPLICATION_MODAL);
+            closeControlPanel.setHandler(() -> {
+                dialog.close();
+            });
+            ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+            ((JDialog) dialog.getWindow()).addWindowListener(new WindowAdapter() {
+                boolean termination = false;
+
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    if (!termination && editorPanel.releaseFile()) {
+                        termination = true;
+                        ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+                        dialog.close();
+                    }
+                }
+            });
+            //            dialog.setSize(650, 460);
+
             dialog.showCentered(frame);
             dialog.dispose();
         });

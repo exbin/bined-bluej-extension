@@ -57,45 +57,47 @@ public class OpenFileAsBinaryAction extends AbstractAction {
         if (previousPath != null) {
             fileChooser.setCurrentDirectory(previousPath);
         }
-        int result = fileChooser.showOpenDialog(frame);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File openedFile = fileChooser.getSelectedFile();
-            previousPath = fileChooser.getCurrentDirectory();
+        SwingUtilities.invokeLater(() -> {
+            int result = fileChooser.showOpenDialog(frame);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File openedFile = fileChooser.getSelectedFile();
+                previousPath = fileChooser.getCurrentDirectory();
 
-            BinEdFile file = null;
-            try {
-                file = new BinEdFile(bluej);
-                file.openDocument(openedFile);
-            } catch (IOException ex) {
-                Logger.getLogger(OpenFileAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
-            BinEdComponentPanel editorPanel = file != null ? file.getComponentPanel() : new BinEdComponentPanel(bluej);
-            CloseControlPanel closeControlPanel = new CloseControlPanel();
-            JPanel dialogPanel = WindowUtils.createDialogPanel(editorPanel, closeControlPanel);
-            WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, frame, "Binary Editor", Dialog.ModalityType.APPLICATION_MODAL);
-            closeControlPanel.setHandler(() -> {
-                dialog.close();
-            });
-            ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-            ((JDialog) dialog.getWindow()).addWindowListener(new WindowAdapter() {
-                boolean termination = false;
-
-                @Override
-                public void windowClosing(WindowEvent e) {
-                    if (!termination && editorPanel.releaseFile()) {
-                        termination = true;
-                        ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
-                        dialog.close();
-                    }
+                BinEdFile file = null;
+                try {
+                    file = new BinEdFile(bluej);
+                    file.openDocument(openedFile);
+                } catch (IOException ex) {
+                    Logger.getLogger(OpenFileAsBinaryAction.class.getName()).log(Level.SEVERE, null, ex);
                 }
-            });
-            //            dialog.setSize(650, 460);
 
-            SwingUtilities.invokeLater(() -> {
-                dialog.showCentered(frame);
-                dialog.dispose();
-            });
-        }
+                BinEdComponentPanel editorPanel = file != null ? file.getComponentPanel() : new BinEdComponentPanel(bluej);
+                CloseControlPanel closeControlPanel = new CloseControlPanel();
+                JPanel dialogPanel = WindowUtils.createDialogPanel(editorPanel, closeControlPanel);
+                WindowUtils.DialogWrapper dialog = WindowUtils.createDialog(dialogPanel, frame, "Binary Editor", Dialog.ModalityType.APPLICATION_MODAL);
+                closeControlPanel.setHandler(() -> {
+                    dialog.close();
+                });
+                ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+                ((JDialog) dialog.getWindow()).addWindowListener(new WindowAdapter() {
+                    boolean termination = false;
+
+                    @Override
+                    public void windowClosing(WindowEvent e) {
+                        if (!termination && editorPanel.releaseFile()) {
+                            termination = true;
+                            ((JDialog) dialog.getWindow()).setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+                            dialog.close();
+                        }
+                    }
+                });
+                //            dialog.setSize(650, 460);
+
+                SwingUtilities.invokeLater(() -> {
+                    dialog.showCentered(frame);
+                    dialog.dispose();
+                });
+            }
+        });
     }
 }

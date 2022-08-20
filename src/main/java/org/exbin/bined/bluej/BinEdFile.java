@@ -188,6 +188,9 @@ public class BinEdFile implements BinEdComponentFileApi {
             File file = new File(fileUri);
             data.saveToStream(new FileOutputStream(file));
         }
+
+        undoHandlerWrapper.getSyncPoint();
+        fileSync();
     }
 
     @Override

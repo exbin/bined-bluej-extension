@@ -17,6 +17,7 @@ package org.exbin.bined.bluej.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -47,7 +48,6 @@ public class BinEdToolbarPanel extends javax.swing.JPanel {
     private final ExtCodeArea codeArea;
     private final AbstractAction optionsAction;
     private final AbstractAction onlineHelpAction;
-    private final BinaryDataUndoHandler undoHandler;
     private final AbstractAction cycleCodeTypesAction;
     private final JRadioButtonMenuItem binaryCodeTypeAction;
     private final JRadioButtonMenuItem octalCodeTypeAction;
@@ -55,16 +55,16 @@ public class BinEdToolbarPanel extends javax.swing.JPanel {
     private final JRadioButtonMenuItem hexadecimalCodeTypeAction;
     private final ButtonGroup codeTypeButtonGroup;
     private DropDownButton codeTypeDropDown;
+    private BinaryDataUndoHandler undoHandler;
 
     private ActionListener saveAction = null;
 
 //    private JSplitButton codeTypeButton;
-    public BinEdToolbarPanel(BinaryEditorPreferences preferences, ExtCodeArea codeArea, AbstractAction optionsAction, AbstractAction onlineHelpAction, BinaryDataUndoHandler undoHandler) {
+    public BinEdToolbarPanel(BinaryEditorPreferences preferences, ExtCodeArea codeArea, AbstractAction optionsAction, AbstractAction onlineHelpAction) {
         this.preferences = preferences;
         this.codeArea = codeArea;
         this.optionsAction = optionsAction;
         this.onlineHelpAction = onlineHelpAction;
-        this.undoHandler = undoHandler;
 
         codeTypeButtonGroup = new ButtonGroup();
         binaryCodeTypeAction = new JRadioButtonMenuItem(new AbstractAction("Binary") {
@@ -170,6 +170,15 @@ public class BinEdToolbarPanel extends javax.swing.JPanel {
         }
     }
 
+    @Nullable
+    public BinaryDataUndoHandler getUndoHandler() {
+        return undoHandler;
+    }
+
+    public void setUndoHandler(BinaryDataUndoHandler undoHandler) {
+        this.undoHandler = undoHandler;
+    }
+
     public void applyFromCodeArea() {
         updateCycleButtonState();
         updateUnprintables();
@@ -188,12 +197,9 @@ public class BinEdToolbarPanel extends javax.swing.JPanel {
     public void updateUndoState() {
         undoEditButton.setEnabled(undoHandler.canUndo());
         redoEditButton.setEnabled(undoHandler.canRedo());
+        saveFileButton.setEnabled(undoHandler.getCommandPosition() != undoHandler.getSyncPoint());
     }
 
-    public void updateModified(boolean modified) {
-        saveFileButton.setEnabled(modified);
-    }
-    
     public void setSaveAction(ActionListener saveAction) {
         this.saveAction = saveAction;
     }

@@ -59,7 +59,6 @@ import org.exbin.bined.highlight.swing.extended.ExtendedHighlightNonAsciiCodeAre
 import org.exbin.framework.bined.gui.ValuesPanel;
 import org.exbin.bined.operation.BinaryDataCommand;
 import org.exbin.bined.operation.swing.CodeAreaOperationCommandHandler;
-import org.exbin.bined.operation.swing.CodeAreaUndoHandler;
 import org.exbin.bined.operation.undo.BinaryDataUndoUpdateListener;
 import org.exbin.bined.swing.basic.color.CodeAreaColorsProfile;
 import org.exbin.bined.swing.extended.ExtCodeArea;
@@ -116,13 +115,13 @@ public final class BinEdComponentPanel extends JPanel {
     private final ExtendedCodeAreaThemeProfile defaultThemeProfile;
     private final CodeAreaColorsProfile defaultColorProfile;
 
-    private BinEdToolbarPanel toolbarPanel;
-    private BinaryStatusPanel statusPanel;
+    private final BinEdToolbarPanel toolbarPanel;
+    private final BinaryStatusPanel statusPanel;
     private BinaryStatusApi binaryStatus;
     private TextEncodingStatusApi encodingStatus;
     private CharsetChangeListener charsetChangeListener = null;
     private ModifiedStateListener modifiedChangeListener = null;
-    private GoToPositionAction goToPositionAction;
+    private final GoToPositionAction goToPositionAction;
     private final InsertDataAction insertDataAction;
     private final EditSelectionAction editSelectionAction;
     private final CompareFilesAction compareFilesAction;
@@ -151,8 +150,7 @@ public final class BinEdComponentPanel extends JPanel {
         defaultLayoutProfile = codeArea.getLayoutProfile();
         defaultThemeProfile = codeArea.getThemeProfile();
         defaultColorProfile = codeArea.getColorsProfile();
-        undoHandler = new CodeAreaUndoHandler(codeArea);
-        toolbarPanel = new BinEdToolbarPanel(preferences, codeArea, createOptionsAction(), createOnlineHelpAction(), undoHandler);
+        toolbarPanel = new BinEdToolbarPanel(preferences, codeArea, createOptionsAction(), createOnlineHelpAction());
         toolbarPanel.setSaveAction(this::saveFileButtonActionPerformed);
         statusPanel = new BinaryStatusPanel();
 
@@ -187,12 +185,9 @@ public final class BinEdComponentPanel extends JPanel {
         };
         searchAction = new SearchAction(codeArea, codeAreaPanel);
 
-        CodeAreaOperationCommandHandler commandHandler = new CodeAreaOperationCommandHandler(codeArea, undoHandler);
-        codeArea.setCommandHandler(commandHandler);
-        
         init();
     }
-    
+
     private void init() {
         codeAreaPanel.add(toolbarPanel, BorderLayout.NORTH);
         registerEncodingStatus(statusPanel);
@@ -221,24 +216,6 @@ public final class BinEdComponentPanel extends JPanel {
         codeAreaPanel.add(codeArea, BorderLayout.CENTER);
         add(statusPanel, BorderLayout.SOUTH);
 
-        undoHandler.addUndoUpdateListener(new BinaryDataUndoUpdateListener() {
-            @Override
-            public void undoCommandPositionChanged() {
-                codeArea.repaint();
-                toolbarPanel.updateUndoState();
-                updateCurrentDocumentSize();
-                notifyModified();
-            }
-
-            @Override
-            public void undoCommandAdded(final BinaryDataCommand command) {
-                toolbarPanel.updateUndoState();
-                updateCurrentDocumentSize();
-                notifyModified();
-            }
-        });
-        toolbarPanel.updateUndoState();
-
         codeArea.setComponentPopupMenu(new JPopupMenu() {
             @Override
             public void show(Component invoker, int x, int y) {
@@ -260,7 +237,7 @@ public final class BinEdComponentPanel extends JPanel {
         });
 
         toolbarPanel.applyFromCodeArea();
-        
+
         getActionMap().put(BinEdFile.ACTION_CLIPBOARD_COPY, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -462,7 +439,7 @@ public final class BinEdComponentPanel extends JPanel {
         if (modifiedChangeListener != null) {
             modifiedChangeListener.modifiedChanged();
         }
-        
+
 //        toolbarPanel.updateModified(isModified());
     }
 
@@ -905,6 +882,8 @@ public final class BinEdComponentPanel extends JPanel {
 
     private void saveFileButtonActionPerformed(java.awt.event.ActionEvent evt) {
         fileApi.saveDocument();
+        toolbarPanel.updateUndoState();
+        statusPanel.updateStatus();
     }
 
     private void initialLoadFromPreferences() {
@@ -977,6 +956,7 @@ public final class BinEdComponentPanel extends JPanel {
         if (valuesPanel != null) {
             valuesPanel.setCodeArea(codeArea, undoHandler);
         }
+
         insertDataAction.setUndoHandler(undoHandler);
         // TODO set ENTER KEY mode in apply options
 
@@ -984,16 +964,20 @@ public final class BinEdComponentPanel extends JPanel {
             @Override
             public void undoCommandPositionChanged() {
                 codeArea.repaint();
+                toolbarPanel.updateUndoState();
                 updateCurrentDocumentSize();
                 notifyModified();
             }
 
             @Override
             public void undoCommandAdded(@Nonnull final BinaryDataCommand command) {
+                toolbarPanel.updateUndoState();
                 updateCurrentDocumentSize();
                 notifyModified();
             }
         });
+        toolbarPanel.setUndoHandler(undoHandler);
+        toolbarPanel.updateUndoState();
     }
 
     @Nullable
