@@ -1,4 +1,4 @@
-version = '0.2.1'
+version = '0.2.2-SNAPSHOT'
 
 buildscript {
     repositories {
@@ -47,7 +47,7 @@ if (!gradle.startParameter.taskNames.any {it.endsWith("test")}) {
 }
 
 task testJar(type: Jar, dependsOn: testClasses) {
-    classifier "tests"
+    archiveClassifier = 'tests'
     archiveBaseName = "test-${project.archivesBaseName}"
     from sourceSets.test.output
 }
@@ -61,7 +61,7 @@ artifacts {
 }
 
 task sourceJar(type: Jar) {
-    classifier = 'sources'
+    archiveClassifier = 'sources'
     from sourceSets.main.java
 }
 
@@ -72,7 +72,7 @@ javadoc {
 }
 
 task javadocJar (type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
     from javadoc.destinationDir
 }
 
@@ -104,7 +104,7 @@ dependencies {
     compile ":paged_data-0.2.1-SNAPSHOT"
     compile ":paged_data-delta-0.2.1-SNAPSHOT"
     compile ':jsr305-3.0.2'
-    testCompile group : 'junit', name: 'junit', version: '4.10'
+    testCompile group : 'junit', name: 'junit', version: '4.13.2'
 }
 
 jar {
